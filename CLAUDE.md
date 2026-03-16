@@ -52,6 +52,22 @@ With `"type": "module"` in package.json, Electron preload scripts must use `.cjs
 ### Voice encryption: tweetnacl
 @discordjs/voice requires a sodium implementation. `tweetnacl` is used (pure JS, no native build required on Windows). `libsodium-wrappers` also present as fallback.
 
+## Navbar
+
+The navbar is injected by `preload.cjs` using `ipcRenderer` directly. It is NOT injected via `executeJavaScript` from main.js.
+
+### Why not executeJavaScript
+`executeJavaScript` runs in the renderer's page context where `require` is undefined. The original `require('electron').ipcRenderer` call inside `navbar.cjs` threw, silently failing injection.
+
+### Why not require('./navbar.cjs') from preload
+Electron 31 enables sandbox by default for all renderers. In sandbox mode, `preloadRequire` only allows `require('electron')` — local file requires like `require('./spoof.cjs')` throw `module not found`. `app.disableSandbox()` and `sandbox: false` on the BrowserWindow do not override this in Electron 31.
+
+### Fix
+All navbar, spoof, and youtube ad-skip logic is inlined directly in `preload.cjs`. No local `require` calls. The preload uses the already-available `ipcRenderer` from `require('electron')` directly for all IPC sends.
+
+### Preload file size
+`preload.cjs` exceeds 200 lines because it inlines three modules (spoof, navbar, audio capture) that cannot be split into separate files due to the sandbox `require` restriction.
+
 ## Gotchas
 
 ### Guild/channel cache on ready

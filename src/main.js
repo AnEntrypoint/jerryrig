@@ -3,7 +3,6 @@ import path from 'node:path'
 dotenv.config({ path: path.join(path.dirname(process.execPath), '.env') })
 dotenv.config()
 import { app, BrowserWindow, ipcMain, session } from 'electron'
-import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createClient, joinDiscordVoice, subscribeToSpeaker, leaveVoice } from './bot/client.js'
 import { initVoicePlayer, pushAudioFrame, stopAudio } from './bot/voice.js'
@@ -20,19 +19,11 @@ const GUILD_ID = process.env.GUILD_ID
 const CHANNEL_ID = process.env.CHANNEL_ID
 const WINDOW_TITLE = 'Discord Voice Bridge'
 
-const NAVBAR_CODE = fs.readFileSync(path.join(__dirname, 'electron', 'navbar.cjs'), 'utf8')
-
 let mainWindow = null
 let botClient = null
 
 process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err))
 process.on('uncaughtException', (err) => console.error('[uncaughtException]', err))
-
-function injectNavbar(wc) {
-  wc.executeJavaScript(NAVBAR_CODE).catch((err) => {
-    console.error('[main] navbar inject failed:', err.message)
-  })
-}
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 const CHROME_VERSION = '126'
@@ -82,9 +73,8 @@ function createWindow() {
   mainWindow.webContents.setAudioMuted(true)
 
   mainWindow.webContents.on('did-finish-load', async () => {
-    console.log('[main] did-finish-load, injecting navbar + start-capture')
+    console.log('[main] did-finish-load, sending start-capture')
     if (!mainWindow || mainWindow.isDestroyed()) return
-    injectNavbar(mainWindow.webContents)
     mainWindow.webContents.send('start-capture')
   })
 

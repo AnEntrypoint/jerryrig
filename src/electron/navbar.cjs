@@ -6,9 +6,19 @@ function normalizeUrl(raw) {
   return 'https://' + s
 }
 
-function injectNavBar() {
+function injectNavBar(_ipc) {
+  if (typeof document === 'undefined') return
   if (document.getElementById('_gm_navbar')) return
-  const _ipc = require('electron').ipcRenderer
+  if (!_ipc) {
+    if (typeof require !== 'undefined') {
+      try { _ipc = require('electron').ipcRenderer } catch (_) {}
+    }
+    if (!_ipc && typeof window !== 'undefined' && window._gmNav) {
+      const n = window._gmNav
+      _ipc = { send: (ch, ...a) => ch === 'nav-back' ? n.back() : ch === 'nav-forward' ? n.forward() : n.go(a[0]) }
+    }
+    if (!_ipc) return
+  }
 
   const bar = document.createElement('div')
   bar.id = '_gm_navbar'
@@ -81,37 +91,36 @@ function injectNavBar() {
   })
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', injectNavBar)
-} else {
-  injectNavBar()
-}
-
-if (location.hostname.includes('youtube.com')) {
+function injectYoutubeAdSkip() {
+  if (typeof location === 'undefined' || !location.hostname.includes('youtube.com')) return
   const AD_SKIP_SELECTORS = [
     '.ytp-skip-ad-button',
     '.ytp-ad-skip-button',
     '.ytp-ad-skip-button-modern',
   ]
-
   function trySkipAd() {
     for (const sel of AD_SKIP_SELECTORS) {
       const btn = document.querySelector(sel)
-      if (btn) {
-        btn.click()
-        return
-      }
+      if (btn) { btn.click(); return }
     }
     const adShowing = document.querySelector('.ad-showing')
     if (adShowing) {
       const video = document.querySelector('video')
-      if (video && video.duration && isFinite(video.duration)) {
-        video.currentTime = video.duration
-      }
+      if (video && video.duration && isFinite(video.duration)) video.currentTime = video.duration
     }
   }
-
   const _adObserver = new MutationObserver(trySkipAd)
   _adObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
   trySkipAd()
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { injectNavBar, injectYoutubeAdSkip }
+} else {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { injectNavBar(); injectYoutubeAdSkip() })
+  } else {
+    injectNavBar()
+    injectYoutubeAdSkip()
+  }
 }

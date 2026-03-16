@@ -1,5 +1,4 @@
 const { ipcRenderer } = require('electron')
-require('./spoof.cjs')
 
 const SAMPLE_RATE = 48000
 
@@ -7,10 +6,146 @@ let captureCtx = null
 let captureGen = 0
 let workletNode = null
 
-window._gmNav = {
-  back: () => ipcRenderer.send('nav-back'),
-  forward: () => ipcRenderer.send('nav-forward'),
-  go: (url) => ipcRenderer.send('nav-go', url),
+void (function spoofBrowserEnv() {
+  Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true })
+  Object.defineProperty(navigator, 'plugins', {
+    get: () => {
+      const arr = [
+        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
+      ]
+      arr.__proto__ = PluginArray.prototype
+      return arr
+    },
+    configurable: true,
+  })
+  Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true })
+  try {
+    const _getParameter = WebGLRenderingContext.prototype.getParameter
+    WebGLRenderingContext.prototype.getParameter = function (param) {
+      if (param === 37445) return 'Intel Inc.'
+      if (param === 37446) return 'Intel Iris OpenGL Engine'
+      return _getParameter.call(this, param)
+    }
+  } catch (_) {}
+  try {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true })
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true })
+    Object.defineProperty(navigator, 'platform', { get: () => 'Win32', configurable: true })
+    Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.', configurable: true })
+    Object.defineProperty(navigator, 'appVersion', {
+      get: () => '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      configurable: true,
+    })
+  } catch (_) {}
+  delete window.electron
+  delete window.__electronjs
+})()
+
+function normalizeUrl(raw) {
+  const s = raw.trim()
+  if (!s) return null
+  if (/^[a-z][a-z0-9+\-.]*:\/\//i.test(s)) return s
+  if (/\s/.test(s) || !/\./.test(s)) return 'https://www.google.com/search?q=' + encodeURIComponent(s)
+  return 'https://' + s
+}
+
+function injectNavBar() {
+  if (document.getElementById('_gm_navbar')) return
+
+  const bar = document.createElement('div')
+  bar.id = '_gm_navbar'
+  bar.style.cssText = [
+    'position:fixed', 'top:0', 'left:0', 'right:0', 'height:36px',
+    'background:#1a1a1a', 'display:flex', 'align-items:center',
+    'gap:4px', 'padding:0 8px', 'z-index:2147483647',
+    'box-sizing:border-box', 'font-family:system-ui,sans-serif',
+  ].join(';')
+
+  const btnStyle = [
+    'background:#333', 'color:#ccc', 'border:none', 'border-radius:4px',
+    'width:28px', 'height:24px', 'cursor:pointer', 'font-size:14px',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'flex-shrink:0',
+  ].join(';')
+
+  const back = document.createElement('button')
+  back.textContent = '\u2039'
+  back.title = 'Back'
+  back.style.cssText = btnStyle
+  back.onclick = () => ipcRenderer.send('nav-back')
+
+  const fwd = document.createElement('button')
+  fwd.textContent = '\u203a'
+  fwd.title = 'Forward'
+  fwd.style.cssText = btnStyle
+  fwd.onclick = () => ipcRenderer.send('nav-forward')
+
+  const input = document.createElement('input')
+  input.id = '_gm_navbar_url'
+  input.type = 'text'
+  input.value = location.href
+  input.style.cssText = [
+    'flex:1', 'height:24px', 'background:#2a2a2a', 'color:#eee',
+    'border:1px solid #444', 'border-radius:4px', 'padding:0 8px',
+    'font-size:13px', 'outline:none', 'box-sizing:border-box',
+  ].join(';')
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') go()
+  })
+
+  const goBtn = document.createElement('button')
+  goBtn.textContent = 'Go'
+  goBtn.style.cssText = [
+    'background:#0066cc', 'color:#fff', 'border:none', 'border-radius:4px',
+    'padding:0 10px', 'height:24px', 'cursor:pointer', 'font-size:13px',
+    'flex-shrink:0',
+  ].join(';')
+  goBtn.onclick = go
+
+  function go() {
+    const url = normalizeUrl(input.value)
+    if (url) ipcRenderer.send('nav-go', url)
+  }
+
+  bar.appendChild(back)
+  bar.appendChild(fwd)
+  bar.appendChild(input)
+  bar.appendChild(goBtn)
+  document.documentElement.insertBefore(bar, document.body)
+
+  const style = document.createElement('style')
+  style.textContent = 'html { padding-top: 36px !important; box-sizing: border-box !important; }'
+  document.head.appendChild(style)
+
+  window.addEventListener('popstate', () => {
+    const el = document.getElementById('_gm_navbar_url')
+    if (el) el.value = location.href
+  })
+}
+
+function injectYoutubeAdSkip() {
+  if (!location.hostname.includes('youtube.com')) return
+  const SELECTORS = ['.ytp-skip-ad-button', '.ytp-ad-skip-button', '.ytp-ad-skip-button-modern']
+  function trySkip() {
+    for (const sel of SELECTORS) {
+      const btn = document.querySelector(sel)
+      if (btn) { btn.click(); return }
+    }
+    const video = document.querySelector('.ad-showing video')
+    if (video && video.duration && isFinite(video.duration)) video.currentTime = video.duration
+  }
+  const obs = new MutationObserver(trySkip)
+  obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+  trySkip()
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { injectNavBar(); injectYoutubeAdSkip() })
+} else {
+  injectNavBar()
+  injectYoutubeAdSkip()
 }
 
 window.addEventListener('load', () => {
