@@ -76,8 +76,7 @@ function initVoicePlayer(connection) {
 
   const resource = _makeStream()
   audioPlayer.play(resource)
-  console.log('[voice] player started, playing 5s test tone at 440Hz')
-  _playTestTone()
+  console.log('[voice] player started')
 }
 
 function pushAudioFrame(f32Buffer) {

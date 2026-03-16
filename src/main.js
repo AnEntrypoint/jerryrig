@@ -63,7 +63,6 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[main] did-finish-load, injecting navbar + start-capture')
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.setAudioMuted(true)
       injectNavbar(mainWindow.webContents)
       mainWindow.webContents.send('start-capture')
     }

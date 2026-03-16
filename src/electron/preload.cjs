@@ -109,8 +109,6 @@ function startCapture() {
     worklet.port.onmessage = (e) => {
       ipcRenderer.send('audio-pcm', e.data)
     }
-    worklet.connect(captureCtx.destination)
-
     document.querySelectorAll('audio, video').forEach((el) => tapElement(el, worklet))
 
     mutationObserver = new MutationObserver((mutations) => {
