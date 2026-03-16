@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, BrowserWindow, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session, desktopCapturer } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -34,6 +34,12 @@ function injectNavbar(wc) {
 
 function createWindow() {
   session.defaultSession.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
+
+  const mainSession = session.fromPartition('persist:main')
+  mainSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true)
+  })
+  mainSession.setPermissionCheckHandler(() => true)
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -75,6 +81,11 @@ function sendAudioToRenderer(userId, f32) {
 
 ipcMain.on('log', (_, msg) => console.log('[renderer]', msg))
 
+ipcMain.handle('get-desktop-source-id', async () => {
+  const sources = await desktopCapturer.getSources({ types: ['screen'] })
+  return sources[0]?.id || null
+})
+
 ipcMain.on('nav-back', () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.goBack()
 })
@@ -110,19 +121,27 @@ async function startBot() {
 
   botClient = createClient()
 
+  const connectVoice = async () => {
+    try {
+      const { voiceConnection } = await joinDiscordVoice(botClient, GUILD_ID, CHANNEL_ID)
+      console.log('[bot] Joined voice channel')
+      initVoicePlayer(voiceConnection)
+      console.log('[bot] Audio bridge ready')
+      voiceConnection.once('stateChange', (o, n) => {
+        if (n.status === 'destroyed') {
+          console.log('[bot] Voice connection destroyed, reconnecting in 15s')
+          setTimeout(connectVoice, 15000)
+        }
+      })
+    } catch (err) {
+      console.error('[bot] Join error:', err.message, '— retrying in 15s')
+      setTimeout(connectVoice, 15000)
+    }
+  }
+
   botClient.on('ready', async () => {
     console.log(`[bot] Logged in as ${botClient.user.tag}`)
-    try {
-      const { voiceConnection, voiceReceiver } = await joinDiscordVoice(botClient, GUILD_ID, CHANNEL_ID)
-      console.log('[bot] Joined voice channel')
-
-      initVoicePlayer(voiceConnection)
-
-
-      console.log('[bot] Audio bridge ready — outbound: Electron audio -> Discord')
-    } catch (err) {
-      console.error('[bot] Setup error:', err.message)
-    }
+    await connectVoice()
   })
 
   botClient.on('error', (err) => console.error('[bot] Client error:', err.message))
