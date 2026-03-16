@@ -38,6 +38,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
+    show: true,
     title: WINDOW_TITLE,
     webPreferences: {
       preload: path.join(__dirname, 'electron', 'preload.cjs'),
@@ -49,6 +50,9 @@ function createWindow() {
       partition: 'persist:main',
     },
   })
+
+  mainWindow.show()
+  mainWindow.focus()
 
   mainWindow.loadURL(TARGET_URL).catch(() => {
     mainWindow.loadFile(path.join(__dirname, 'electron', 'error.html')).catch(() => {})

@@ -89,3 +89,32 @@ if (document.readyState === 'loading') {
 } else {
   injectNavBar()
 }
+
+if (location.hostname.includes('youtube.com')) {
+  const AD_SKIP_SELECTORS = [
+    '.ytp-skip-ad-button',
+    '.ytp-ad-skip-button',
+    '.ytp-ad-skip-button-modern',
+  ]
+
+  function trySkipAd() {
+    for (const sel of AD_SKIP_SELECTORS) {
+      const btn = document.querySelector(sel)
+      if (btn) {
+        btn.click()
+        return
+      }
+    }
+    const adShowing = document.querySelector('.ad-showing')
+    if (adShowing) {
+      const video = document.querySelector('video')
+      if (video && video.duration && isFinite(video.duration)) {
+        video.currentTime = video.duration
+      }
+    }
+  }
+
+  const _adObserver = new MutationObserver(trySkipAd)
+  _adObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+  trySkipAd()
+}
