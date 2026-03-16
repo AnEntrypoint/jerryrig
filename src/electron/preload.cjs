@@ -101,9 +101,15 @@ async function startCapture() {
     tapped.add(el)
     try {
       captureCtx.createMediaElementSource(el).connect(worklet)
-      ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '>')
+      ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via MediaElementSource')
     } catch (e) {
-      ipcRenderer.send('log', '[capture] tap err: ' + e.message)
+      try {
+        const stream = el.captureStream ? el.captureStream() : el.mozCaptureStream()
+        captureCtx.createMediaStreamSource(stream).connect(worklet)
+        ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via captureStream')
+      } catch (e2) {
+        ipcRenderer.send('log', '[capture] tap failed: ' + e2.message)
+      }
     }
   }
 
