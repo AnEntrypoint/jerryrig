@@ -53,9 +53,9 @@ ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
   nextPlayTime[userId] += buf.duration
 })
 
-ipcRenderer.on('start-capture', (_, sourceId) => {
+ipcRenderer.on('start-capture', () => {
   resetCapture()
-  startCapture(sourceId)
+  startCapture()
 })
 
 ipcRenderer.on('reset-capture', () => resetCapture())
@@ -79,7 +79,7 @@ async function buildWorklet(ctx) {
   return worklet
 }
 
-async function startCapture(sourceId) {
+async function startCapture() {
   if (captureCtx) return
 
   captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
@@ -119,18 +119,4 @@ async function startCapture(sourceId) {
   }).observe(document.documentElement, { childList: true, subtree: true })
 
   ipcRenderer.send('log', '[capture] MediaElement strategy active, elements=' + document.querySelectorAll('audio,video').length)
-
-  if (sourceId) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId } },
-        video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, maxWidth: 1, maxHeight: 1 } },
-      })
-      stream.getVideoTracks().forEach(t => t.stop())
-      captureCtx.createMediaStreamSource(stream).connect(worklet)
-      ipcRenderer.send('log', '[capture] + loopback fallback active')
-    } catch (e) {
-      ipcRenderer.send('log', '[capture] loopback unavailable: ' + e.message)
-    }
-  }
 }

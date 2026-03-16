@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, BrowserWindow, ipcMain, session, desktopCapturer } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -64,15 +64,7 @@ function createWindow() {
     console.log('[main] did-finish-load, injecting navbar + start-capture')
     if (!mainWindow || mainWindow.isDestroyed()) return
     injectNavbar(mainWindow.webContents)
-    try {
-      const sources = await desktopCapturer.getSources({ types: ['screen'] })
-      const src = sources[0]
-      console.log('[main] capture source:', src?.name, src?.id)
-      mainWindow.webContents.send('start-capture', src?.id)
-    } catch (err) {
-      console.error('[main] desktopCapturer error:', err.message)
-      mainWindow.webContents.send('start-capture', 'screen:0:0')
-    }
+    mainWindow.webContents.send('start-capture')
   })
 
   mainWindow.on('closed', () => { mainWindow = null })
