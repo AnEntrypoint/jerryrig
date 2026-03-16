@@ -1,10 +1,10 @@
 const { ipcRenderer } = require('electron')
 
 const SAMPLE_RATE = 48000
-const _origConnect = AudioNode.prototype.connect
 
 let captureCtx = null
 let captureGen = 0
+let scriptNode = null
 
 window._gmNav = {
   back: () => ipcRenderer.send('nav-back'),
@@ -16,48 +16,18 @@ ipcRenderer.on('start-capture', () => startCapture())
 ipcRenderer.on('reset-capture', () => {
   captureGen++
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null }
+  scriptNode = null
 })
 
-async function startCapture() {
-  captureGen++
-  const gen = captureGen
-
-  await new Promise(r => setTimeout(r, 300))
-  if (captureGen !== gen) return
-  if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null }
-
-  let stream = null
-  try {
-    const sourceId = await ipcRenderer.invoke('get-screen-source-id')
-    if (sourceId) {
-      stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
-          audio: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId } },
-          video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, minWidth: 1, maxWidth: 1, minHeight: 1, maxHeight: 1, maxFrameRate: 1 } },
-        }).then(s => { s.getVideoTracks().forEach(t => t.stop()); return s }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-      ])
-      ipcRenderer.send('log', '[capture] screen stream acquired, tracks=' + stream.getAudioTracks().length)
-    }
-  } catch (e) {
-    ipcRenderer.send('log', '[capture] screen capture failed: ' + e.message)
-  }
-
-  if (captureGen !== gen) { if (stream) stream.getTracks().forEach(t => t.stop()); return }
-  if (!stream || !stream.getAudioTracks().length) {
-    ipcRenderer.send('log', '[capture] no stream, retrying in 2s')
-    setTimeout(() => { if (captureGen === gen) startCapture() }, 2000)
-    return
-  }
-
+function buildCaptureGraph() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE })
   captureCtx = ctx
-  await ctx.resume()
-  if (captureGen !== gen) { ctx.close().catch(() => {}); return }
+  ctx.resume().catch(() => {})
 
-  const scriptNode = ctx.createScriptProcessor(4096, 2, 2)
+  const node = ctx.createScriptProcessor(4096, 2, 2)
+  scriptNode = node
   let _count = 0
-  scriptNode.onaudioprocess = (e) => {
+  node.onaudioprocess = (e) => {
     const L = e.inputBuffer.getChannelData(0)
     const R = e.inputBuffer.getChannelData(1)
     const out = new Float32Array(L.length * 2)
@@ -69,16 +39,81 @@ async function startCapture() {
 
   const silencer = ctx.createGain()
   silencer.gain.value = 0
-  _origConnect.call(scriptNode, silencer)
-  _origConnect.call(silencer, ctx.destination)
-  _origConnect.call(ctx.createMediaStreamSource(stream), scriptNode)
+  node.connect(silencer)
+  silencer.connect(ctx.destination)
 
   const osc = ctx.createOscillator()
   const oscGain = ctx.createGain()
   oscGain.gain.value = 0
-  _origConnect.call(osc, oscGain)
-  _origConnect.call(oscGain, scriptNode)
+  osc.connect(oscGain)
+  oscGain.connect(node)
   osc.start()
 
-  ipcRenderer.send('log', '[capture] active')
+  return ctx
+}
+
+function connectMediaEl(el) {
+  if (!captureCtx || captureCtx.state === 'closed') return
+  if (el._gmCaptured) return
+  el._gmCaptured = true
+  try {
+    const src = captureCtx.createMediaElementSource(el)
+    src.connect(scriptNode)
+    ipcRenderer.send('log', '[capture] media element connected: ' + (el.src || el.currentSrc || 'unknown').slice(0, 80))
+  } catch (e) {
+    ipcRenderer.send('log', '[capture] media element connect failed: ' + e.message)
+  }
+}
+
+function patchAudioNodeConnect(ctx) {
+  const _orig = AudioNode.prototype.connect
+  const dest = ctx.createMediaStreamDestination()
+  AudioNode.prototype.connect = function(target, outIdx, inIdx) {
+    if (target instanceof AudioDestinationNode && target === ctx.destination) {
+      const r = outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
+      _orig.call(this, scriptNode, outIdx !== undefined ? outIdx : 0)
+      return r
+    }
+    return outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
+  }
+}
+
+function scanMediaElements() {
+  document.querySelectorAll('video, audio').forEach(connectMediaEl)
+}
+
+function observeMediaElements() {
+  const obs = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue
+        if (node.matches && node.matches('video, audio')) connectMediaEl(node)
+        node.querySelectorAll && node.querySelectorAll('video, audio').forEach(connectMediaEl)
+      }
+    }
+  })
+  obs.observe(document.documentElement, { childList: true, subtree: true })
+}
+
+async function startCapture() {
+  captureGen++
+  const gen = captureGen
+
+  await new Promise(r => setTimeout(r, 500))
+  if (captureGen !== gen) return
+  if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; scriptNode = null }
+
+  buildCaptureGraph()
+  patchAudioNodeConnect(captureCtx)
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (captureGen === gen) { scanMediaElements(); observeMediaElements() }
+    })
+  } else {
+    scanMediaElements()
+    observeMediaElements()
+  }
+
+  ipcRenderer.send('log', '[capture] active (web-audio + media-element intercept)')
 }

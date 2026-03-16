@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, BrowserWindow, ipcMain, session, desktopCapturer } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -83,11 +83,6 @@ function sendAudioToRenderer(userId, f32) {
 
 ipcMain.on('log', (_, msg) => console.log('[renderer]', msg))
 
-ipcMain.handle('get-screen-source-id', async () => {
-  const sources = await desktopCapturer.getSources({ types: ['screen'] })
-  console.log('[main] screen sources:', sources.map(s => s.name))
-  return sources[0]?.id || null
-})
 
 ipcMain.on('nav-back', () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.goBack()
