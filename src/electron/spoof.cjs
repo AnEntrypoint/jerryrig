@@ -35,6 +35,5 @@ void (function () {
   } catch (_) {}
 
   delete window.electron
-  delete window.process
   delete window.__electronjs
 })()

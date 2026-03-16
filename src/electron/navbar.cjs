@@ -2,6 +2,7 @@ function normalizeUrl(raw) {
   const s = raw.trim()
   if (!s) return null
   if (/^[a-z][a-z0-9+\-.]*:\/\//i.test(s)) return s
+  if (/\s/.test(s) || !/\./.test(s)) return 'https://www.google.com/search?q=' + encodeURIComponent(s)
   return 'https://' + s
 }
 

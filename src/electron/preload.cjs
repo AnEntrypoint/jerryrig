@@ -82,16 +82,14 @@ function connectMediaEl(el) {
   }
 }
 
-function patchAudioNodeConnect(ctx) {
+function patchAudioNodeConnect() {
   const _orig = AudioNode.prototype.connect
-  const dest = ctx.createMediaStreamDestination()
   AudioNode.prototype.connect = function(target, outIdx, inIdx) {
-    if (target instanceof AudioDestinationNode && target === ctx.destination) {
-      const r = outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
-      _orig.call(this, workletNode, outIdx !== undefined ? outIdx : 0)
-      return r
+    const r = outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
+    if (target instanceof AudioDestinationNode && workletNode) {
+      try { _orig.call(this, workletNode, outIdx !== undefined ? outIdx : 0) } catch (_) {}
     }
-    return outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
+    return r
   }
 }
 
@@ -121,7 +119,7 @@ async function startCapture() {
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; workletNode = null }
 
   await buildCaptureGraph()
-  patchAudioNodeConnect(captureCtx)
+  patchAudioNodeConnect()
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
