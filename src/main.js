@@ -9,6 +9,10 @@ import { initVoicePlayer, pushAudioFrame, stopAudio } from './bot/voice.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const TARGET_URL = process.env.TARGET_URL || 'https://example.com'
+const CDP_PORT = process.env.CDP_PORT || '9222'
+
+app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)
+app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1')
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const GUILD_ID = process.env.GUILD_ID
 const CHANNEL_ID = process.env.CHANNEL_ID
@@ -29,6 +33,8 @@ function injectNavbar(wc) {
 }
 
 function createWindow() {
+  session.defaultSession.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
@@ -37,6 +43,10 @@ function createWindow() {
       preload: path.join(__dirname, 'electron', 'preload.cjs'),
       contextIsolation: true,
       autoplayPolicy: 'no-user-gesture-required',
+      webSecurity: false,
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true,
+      partition: 'persist:main',
     },
   })
 
@@ -111,11 +121,12 @@ async function startBot() {
 
       initVoicePlayer(voiceConnection)
 
-      voiceReceiver.speaking.on('start', (userId) => {
-        subscribeToSpeaker(userId, sendAudioToRenderer)
-      })
+      // Inbound audio path disabled to prevent feedback loop — bot sends only
+      // voiceReceiver.speaking.on('start', (userId) => {
+      //   subscribeToSpeaker(userId, sendAudioToRenderer)
+      // })
 
-      console.log('[bot] Audio bridge ready — outbound: Electron audio -> Discord, inbound: Discord -> Electron')
+      console.log('[bot] Audio bridge ready — outbound: Electron audio -> Discord')
     } catch (err) {
       console.error('[bot] Setup error:', err.message)
     }

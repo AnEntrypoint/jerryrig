@@ -65,6 +65,23 @@ With `contextIsolation: true`, the preload runs in a separate world but has acce
 ### desktopCapturer sourceId for loopback
 The source ID must match the exact window. `desktopCapturer` is called in main process (not renderer) and the ID is forwarded to the renderer via IPC. Electron requires `display-capture` permission to be granted (set in `setPermissionRequestHandler`).
 
+## agent-browser (CDP)
+
+The Electron window exposes Chrome DevTools Protocol on `127.0.0.1:CDP_PORT` (default 9222).
+
+Connect with [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser):
+
+```
+agent-browser connect 9222
+agent-browser snapshot
+agent-browser screenshot
+agent-browser --cdp 9222 open https://example.com
+```
+
+The port is set via `app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)` before `app ready`. Change it with `CDP_PORT=9223` in `.env`.
+
+No custom HTTP server is needed — Electron's built-in CDP server is the interface agent-browser uses.
+
 ## File Map
 
 - `src/main.js` — Electron main entry, wires all modules

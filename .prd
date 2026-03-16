@@ -1,0 +1,53 @@
+[
+  {
+    "id": "enable-cdp-remote-debugging",
+    "subject": "Enable CDP remote debugging port in Electron for agent-browser",
+    "status": "pending",
+    "description": "Add app.commandLine.appendSwitch for remote-debugging-port to main.js. Read CDP_PORT from env, default 9222.",
+    "blocking": ["update-env-example", "update-claude-md", "commit-changes"],
+    "blockedBy": [],
+    "effort": "small",
+    "category": "feature",
+    "acceptance": [
+      "app.commandLine.appendSwitch present in main.js",
+      "CDP_PORT env var with default 9222"
+    ],
+    "edge_cases": ["Must be set before app ready event"]
+  },
+  {
+    "id": "update-env-example",
+    "subject": "Add CDP_PORT to .env.example",
+    "status": "pending",
+    "description": "Document CDP_PORT=9222 with comment about agent-browser",
+    "blocking": ["commit-changes"],
+    "blockedBy": ["enable-cdp-remote-debugging"],
+    "effort": "small",
+    "category": "docs",
+    "acceptance": ["CDP_PORT=9222 with comment in .env.example"],
+    "edge_cases": []
+  },
+  {
+    "id": "update-claude-md",
+    "subject": "Document agent-browser CDP connection in CLAUDE.md",
+    "status": "pending",
+    "description": "Add agent-browser section to CLAUDE.md",
+    "blocking": ["commit-changes"],
+    "blockedBy": ["enable-cdp-remote-debugging"],
+    "effort": "small",
+    "category": "docs",
+    "acceptance": ["CLAUDE.md has agent-browser section"],
+    "edge_cases": []
+  },
+  {
+    "id": "commit-changes",
+    "subject": "Commit and push all changes",
+    "status": "pending",
+    "description": "git add, commit, push",
+    "blocking": [],
+    "blockedBy": ["update-env-example", "update-claude-md"],
+    "effort": "small",
+    "category": "infra",
+    "acceptance": ["git status --porcelain is empty"],
+    "edge_cases": []
+  }
+]
