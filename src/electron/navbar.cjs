@@ -9,8 +9,6 @@ function normalizeUrl(raw) {
 function injectNavBar() {
   if (document.getElementById('_gm_navbar')) return
 
-  const nav = window._gmNav
-
   const bar = document.createElement('div')
   bar.id = '_gm_navbar'
   bar.style.cssText = [
@@ -31,13 +29,13 @@ function injectNavBar() {
   back.textContent = '\u2039'
   back.title = 'Back'
   back.style.cssText = btnStyle
-  back.onclick = () => nav.back()
+  back.onclick = () => window._gmNav.back()
 
   const fwd = document.createElement('button')
   fwd.textContent = '\u203a'
   fwd.title = 'Forward'
   fwd.style.cssText = btnStyle
-  fwd.onclick = () => nav.forward()
+  fwd.onclick = () => window._gmNav.forward()
 
   const input = document.createElement('input')
   input.id = '_gm_navbar_url'
@@ -63,7 +61,7 @@ function injectNavBar() {
 
   function go() {
     const url = normalizeUrl(input.value)
-    if (url) nav.go(url)
+    if (url) window._gmNav.go(url)
   }
 
   bar.appendChild(back)

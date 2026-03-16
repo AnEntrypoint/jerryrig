@@ -13,6 +13,11 @@ window._gmNav = {
   go: (url) => ipcRenderer.send('nav-go', url),
 }
 
+window.addEventListener('load', () => {
+  const el = document.getElementById('_gm_navbar_url')
+  if (el) el.value = location.href
+})
+
 ipcRenderer.on('start-capture', () => startCapture())
 ipcRenderer.on('reset-capture', () => {
   captureGen++
