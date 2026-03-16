@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron')
+const { ipcRenderer, contextBridge } = require('electron')
 
 const CHANNELS = 2
 const SAMPLE_RATE = 48000
@@ -12,6 +12,12 @@ function getPlayCtx() {
   if (playCtx.state === 'suspended') playCtx.resume()
   return playCtx
 }
+
+contextBridge.exposeInMainWorld('_gmNav', {
+  back: () => ipcRenderer.send('nav-back'),
+  forward: () => ipcRenderer.send('nav-forward'),
+  go: (url) => ipcRenderer.send('nav-go', url),
+})
 
 ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
   const ctx = getPlayCtx()
@@ -34,6 +40,13 @@ ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
 
 ipcRenderer.on('start-capture', () => {
   startCapture()
+})
+
+ipcRenderer.on('reset-capture', () => {
+  if (captureCtx) {
+    captureCtx.close().catch(() => {})
+    captureCtx = null
+  }
 })
 
 function startCapture() {

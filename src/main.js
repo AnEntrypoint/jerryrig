@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createClient, joinDiscordVoice, subscribeToSpeaker, leaveVoice } from './bot/client.js'
 import { initVoicePlayer, pushAudioFrame, stopAudio } from './bot/voice.js'
@@ -13,11 +14,19 @@ const GUILD_ID = process.env.GUILD_ID
 const CHANNEL_ID = process.env.CHANNEL_ID
 const WINDOW_TITLE = 'Discord Voice Bridge'
 
+const NAVBAR_CODE = fs.readFileSync(path.join(__dirname, 'electron', 'navbar.cjs'), 'utf8')
+
 let mainWindow = null
 let botClient = null
 
 process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err))
 process.on('uncaughtException', (err) => console.error('[uncaughtException]', err))
+
+function injectNavbar(wc) {
+  wc.executeJavaScript(NAVBAR_CODE).catch((err) => {
+    console.error('[main] navbar inject failed:', err.message)
+  })
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -35,9 +44,16 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'electron', 'error.html')).catch(() => {})
   })
 
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('[main] did-finish-load, sending start-capture')
+  mainWindow.webContents.on('did-start-navigation', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('reset-capture')
+    }
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[main] did-finish-load, injecting navbar + start-capture')
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      injectNavbar(mainWindow.webContents)
       mainWindow.webContents.send('start-capture')
     }
   })
@@ -51,6 +67,22 @@ function sendAudioToRenderer(userId, f32) {
 }
 
 ipcMain.on('log', (_, msg) => console.log('[renderer]', msg))
+
+ipcMain.on('nav-back', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.goBack()
+})
+
+ipcMain.on('nav-forward', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.goForward()
+})
+
+ipcMain.on('nav-go', (_, url) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.loadURL(url).catch((err) => {
+      console.error('[main] nav-go loadURL failed:', err.message)
+    })
+  }
+})
 
 let _audioFrameCount = 0
 ipcMain.on('audio-pcm', (_, arrayBuffer) => {
@@ -83,7 +115,7 @@ async function startBot() {
         subscribeToSpeaker(userId, sendAudioToRenderer)
       })
 
-      console.log('[bot] Audio bridge ready — outbound: Electron audio → Discord, inbound: Discord → Electron')
+      console.log('[bot] Audio bridge ready — outbound: Electron audio -> Discord, inbound: Discord -> Electron')
     } catch (err) {
       console.error('[bot] Setup error:', err.message)
     }
