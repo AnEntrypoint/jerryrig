@@ -2,8 +2,8 @@ name: Build and Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
 
 jobs:
   build:
@@ -15,6 +15,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Bump patch version
+        id: version
+        run: |
+          $ver = node -e "const p=require('./package.json'); const parts=p.version.split('.'); parts[2]=parseInt(parts[2])+1; console.log(parts.join('.'))"
+          npm version $ver --no-git-tag-version
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+
       - name: Install dependencies
         run: npm install
 
@@ -23,9 +30,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release asset
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
