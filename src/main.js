@@ -55,7 +55,7 @@ function createWindow() {
   })
 
   const preloadDir = (app.isPackaged
-    ? path.join(process.resourcesPath, 'app', 'src', 'electron')
+    ? process.resourcesPath
     : path.join(__dirname, 'electron')
   ).replace(/\\/g, '/')
 

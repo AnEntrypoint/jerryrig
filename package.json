@@ -27,6 +27,13 @@
     "appId": "com.discord-screen-bridge.app",
     "productName": "Discord Screen Bridge",
     "forceCodeSigning": false,
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "src/electron/capture-worklet.js",
+        "to": "capture-worklet.js"
+      }
+    ],
     "publish": {
       "provider": "github",
       "owner": "AnEntrypoint",

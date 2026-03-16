@@ -195,7 +195,7 @@ async function buildCaptureGraph() {
   ctx.resume().catch(() => {})
 
   const preloadDir = (process.argv.find(a => a.startsWith('--preload-dir=')) || '').slice('--preload-dir='.length)
-  const workletUrl = 'file:///' + preloadDir + '/capture-worklet.js'
+  const workletUrl = 'file:///' + preloadDir.replace(/\\/g, '/') + '/capture-worklet.js'
   await ctx.audioWorklet.addModule(workletUrl)
 
   const node = new AudioWorkletNode(ctx, 'capture-processor')
