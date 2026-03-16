@@ -4,3 +4,5 @@ package-lock.json
 .env  
 
 .code-search/'logs.txt'  
+'.code-search/'  
+'logs.txt'  
