@@ -120,10 +120,9 @@ async function startBot() {
 
       initVoicePlayer(voiceConnection)
 
-      // Inbound audio path disabled to prevent feedback loop — bot sends only
-      // voiceReceiver.speaking.on('start', (userId) => {
-      //   subscribeToSpeaker(userId, sendAudioToRenderer)
-      // })
+      voiceReceiver.speaking.on('start', (userId) => {
+        subscribeToSpeaker(userId, sendAudioToRenderer)
+      })
 
       console.log('[bot] Audio bridge ready — outbound: Electron audio -> Discord')
     } catch (err) {

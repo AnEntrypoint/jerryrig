@@ -53,10 +53,7 @@ ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
   nextPlayTime[userId] += buf.duration
 })
 
-ipcRenderer.on('start-capture', () => {
-  resetCapture()
-  startCapture()
-})
+ipcRenderer.on('start-capture', () => startCapture())
 
 ipcRenderer.on('reset-capture', () => resetCapture())
 
@@ -80,8 +77,7 @@ async function buildWorklet(ctx) {
 }
 
 async function startCapture() {
-  if (captureCtx) return
-
+  resetCapture()
   captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
   await captureCtx.resume()
 
@@ -92,7 +88,10 @@ async function startCapture() {
   })
   if (!worklet || !captureCtx) return
 
-  worklet.connect(captureCtx.destination)
+  const silencer = captureCtx.createGain()
+  silencer.gain.value = 0
+  worklet.connect(silencer)
+  silencer.connect(captureCtx.destination)
 
   const tapped = new WeakSet()
 
