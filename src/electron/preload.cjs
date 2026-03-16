@@ -163,6 +163,11 @@ ipcRenderer.on('reset-capture', () => {
   workletNode = null
 })
 
+// Start capture immediately on every page load — don't rely solely on IPC timing
+if (!location.href.startsWith('chrome-error://') && !location.href.startsWith('devtools://')) {
+  startCapture()
+}
+
 let _ctxSeq = 0
 async function buildCaptureGraph() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE })
