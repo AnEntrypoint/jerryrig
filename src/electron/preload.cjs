@@ -1,4 +1,5 @@
 const { ipcRenderer } = require('electron')
+require('./spoof.cjs')
 
 const SAMPLE_RATE = 48000
 
