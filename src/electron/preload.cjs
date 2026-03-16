@@ -175,25 +175,8 @@ async function buildCaptureGraph() {
   captureCtx = ctx
   ctx.resume().catch(() => {})
 
-  const workletCode = `
-class CaptureProcessor extends AudioWorkletProcessor {
-  process(inputs) {
-    const input = inputs[0]
-    if (input && input[0]) {
-      const L = input[0], R = input[1] || input[0]
-      const out = new Float32Array(L.length * 2)
-      for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
-      this.port.postMessage(out.buffer, [out.buffer])
-    }
-    return true
-  }
-}
-registerProcessor('capture-processor', CaptureProcessor)
-`
-  const blob = new Blob([workletCode], { type: 'application/javascript' })
-  const url = URL.createObjectURL(blob)
-  await ctx.audioWorklet.addModule(url)
-  URL.revokeObjectURL(url)
+  const workletUrl = 'file://' + __dirname.replace(/\\/g, '/') + '/capture-worklet.js'
+  await ctx.audioWorklet.addModule(workletUrl)
 
   const node = new AudioWorkletNode(ctx, 'capture-processor')
   workletNode = node
