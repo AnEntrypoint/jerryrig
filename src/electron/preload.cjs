@@ -2,7 +2,6 @@ const { ipcRenderer } = require('electron')
 
 const CHANNELS = 2
 const SAMPLE_RATE = 48000
-const FRAME_SIZE = 960
 
 let playCtx = null
 let captureCtx = null
@@ -33,50 +32,64 @@ ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
   nextPlayTime[userId] += buf.duration
 })
 
-ipcRenderer.on('start-capture', (_, { sourceId }) => {
-  startLoopbackCapture(sourceId)
+ipcRenderer.on('start-capture', () => {
+  startCapture()
 })
 
-async function startLoopbackCapture(sourceId) {
+function startCapture() {
   if (captureCtx) return
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sourceId,
-        },
-      },
-      video: {
-        mandatory: {
-          chromeMediaSource: 'desktop',
-          chromeMediaSourceId: sourceId,
-          maxWidth: 1,
-          maxHeight: 1,
-          maxFrameRate: 1,
-        },
-      },
-    })
 
-    captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
-    const source = captureCtx.createMediaStreamSource(stream)
-    const processor = captureCtx.createScriptProcessor(FRAME_SIZE, CHANNELS, CHANNELS)
-
-    processor.onaudioprocess = (e) => {
-      const left = e.inputBuffer.getChannelData(0)
-      const right = e.inputBuffer.getChannelData(1) || left
-      const interleaved = new Float32Array(left.length * CHANNELS)
-      for (let i = 0; i < left.length; i++) {
-        interleaved[i * 2] = left[i]
-        interleaved[i * 2 + 1] = right[i]
-      }
-      ipcRenderer.send('audio-pcm', interleaved.buffer)
-    }
-
-    source.connect(processor)
-    processor.connect(captureCtx.destination)
-    console.log('[capture] Loopback audio capture started')
-  } catch (err) {
-    console.error('[capture] Loopback capture failed:', err.message)
+  const video = document.querySelector('video')
+  if (!video) {
+    ipcRenderer.send('log', '[capture] No video element found, retrying in 1s')
+    setTimeout(startCapture, 1000)
+    return
   }
+  ipcRenderer.send('log', '[capture] video found, readyState=' + video.readyState + ' paused=' + video.paused + ' src=' + video.src.slice(0, 60))
+
+  captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
+  captureCtx.resume().catch(() => {})
+
+  let source
+  try {
+    source = captureCtx.createMediaElementSource(video)
+  } catch (err) {
+    ipcRenderer.send('log', '[capture] createMediaElementSource failed: ' + err.message)
+    captureCtx = null
+    return
+  }
+
+  const workletCode = `
+    class PcmCapture extends AudioWorkletProcessor {
+      process(inputs) {
+        const inp = inputs[0]
+        if (!inp || !inp[0]) return true
+        const L = inp[0], R = inp[1] || inp[0]
+        const out = new Float32Array(L.length * ${CHANNELS})
+        for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
+        this.port.postMessage(out.buffer, [out.buffer])
+        return true
+      }
+    }
+    registerProcessor('pcm-capture', PcmCapture)
+  `
+  const blob = new Blob([workletCode], { type: 'application/javascript' })
+  const workletUrl = URL.createObjectURL(blob)
+
+  captureCtx.audioWorklet.addModule(workletUrl).then(() => {
+    URL.revokeObjectURL(workletUrl)
+    const worklet = new AudioWorkletNode(captureCtx, 'pcm-capture', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+    })
+    worklet.port.onmessage = (e) => {
+      ipcRenderer.send('audio-pcm', e.data)
+    }
+    source.connect(worklet)
+    worklet.connect(captureCtx.destination)
+    ipcRenderer.send('log', '[capture] AudioWorklet capture started, ctx state=' + captureCtx.state)
+  }).catch((err) => {
+    ipcRenderer.send('log', '[capture] AudioWorklet addModule failed: ' + err.message)
+  })
 }

@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, BrowserWindow, ipcMain, desktopCapturer, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient, joinDiscordVoice, subscribeToSpeaker, leaveVoice } from './bot/client.js'
@@ -35,15 +35,10 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'electron', 'error.html')).catch(() => {})
   })
 
-  mainWindow.webContents.on('did-finish-load', async () => {
-    try {
-      const sources = await desktopCapturer.getSources({ types: ['window'] })
-      const own = sources.find((s) => s.name === WINDOW_TITLE) || sources[0]
-      if (own && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('start-capture', { sourceId: own.id })
-      }
-    } catch (err) {
-      console.error('[main] desktopCapturer error:', err.message)
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('[main] did-finish-load, sending start-capture')
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('start-capture')
     }
   })
 
@@ -55,8 +50,16 @@ function sendAudioToRenderer(userId, f32) {
   mainWindow.webContents.send('audio-chunk', { userId, data: Array.from(f32) })
 }
 
+ipcMain.on('log', (_, msg) => console.log('[renderer]', msg))
+
+let _audioFrameCount = 0
 ipcMain.on('audio-pcm', (_, arrayBuffer) => {
-  const f32 = new Float32Array(arrayBuffer)
+  const buf = Buffer.isBuffer(arrayBuffer) ? arrayBuffer : Buffer.from(arrayBuffer)
+  const f32 = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4)
+  _audioFrameCount++
+  if (_audioFrameCount <= 5 || _audioFrameCount % 500 === 0) {
+    console.log(`[main] audio-pcm frame #${_audioFrameCount}, samples=${f32.length}, peak=${Math.max(...f32).toFixed(4)}`)
+  }
   pushAudioFrame(f32)
 })
 

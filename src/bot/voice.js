@@ -13,7 +13,7 @@ function initVoicePlayer(connection) {
 
   audioPlayer.on('error', (err) => console.error('[voice] AudioPlayer error:', err.message))
   audioPlayer.on(AudioPlayerStatus.Idle, () => {
-    if (pcmInput && !pcmInput.destroyed) _startPlayback()
+    _startPlayback()
   })
 
   connection.on(VoiceConnectionStatus.Disconnected, () => {

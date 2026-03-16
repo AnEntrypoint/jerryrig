@@ -1,0 +1,111 @@
+
+> discord-screen-bridge@1.0.0 start
+> electron .
+
+
+[main] did-finish-load, sending start-capture
+[renderer] [capture] video found, readyState=3 paused=false src=https://commondatastorage.googleapis.com/gtv-videos-bucket/s
+[renderer] [capture] AudioWorklet capture started, ctx state=running
+[main] audio-pcm frame #1, samples=256, peak=0.0000
+[main] audio-pcm frame #2, samples=256, peak=0.0000
+[main] audio-pcm frame #3, samples=256, peak=0.0000
+[main] audio-pcm frame #4, samples=256, peak=0.0000
+[main] audio-pcm frame #5, samples=256, peak=0.0000
+[main] audio-pcm frame #500, samples=256, peak=0.0025
+[bot] Logged in as memobot#9647
+[bot] Joined voice channel
+[bot] Audio bridge ready — outbound: Electron audio → Discord, inbound: Discord → Electron
+(node:108292) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+(Use `electron --trace-deprecation ...` to show where the warning was created)
+[main] audio-pcm frame #1000, samples=256, peak=0.0038
+[main] audio-pcm frame #1500, samples=256, peak=0.0102
+[main] audio-pcm frame #2000, samples=256, peak=0.0039
+[main] audio-pcm frame #2500, samples=256, peak=0.0026
+[main] audio-pcm frame #3000, samples=256, peak=0.0060
+[main] audio-pcm frame #3500, samples=256, peak=0.0216
+[main] audio-pcm frame #4000, samples=256, peak=0.0253
+[main] audio-pcm frame #4500, samples=256, peak=0.0305
+[main] audio-pcm frame #5000, samples=256, peak=0.0613
+[main] audio-pcm frame #5500, samples=256, peak=0.0402
+[main] audio-pcm frame #6000, samples=256, peak=0.0095
+[main] audio-pcm frame #6500, samples=256, peak=0.0354
+[main] audio-pcm frame #7000, samples=256, peak=0.0112
+[main] audio-pcm frame #7500, samples=256, peak=0.0464
+[main] audio-pcm frame #8000, samples=256, peak=0.0038
+[main] audio-pcm frame #8500, samples=256, peak=0.0021
+[main] audio-pcm frame #9000, samples=256, peak=0.0063
+[main] audio-pcm frame #9500, samples=256, peak=0.0039
+[main] audio-pcm frame #10000, samples=256, peak=0.0061
+[main] audio-pcm frame #10500, samples=256, peak=0.0042
+[main] audio-pcm frame #11000, samples=256, peak=0.0055
+[main] audio-pcm frame #11500, samples=256, peak=0.0033
+[main] audio-pcm frame #12000, samples=256, peak=0.0097
+[main] audio-pcm frame #12500, samples=256, peak=0.0102
+[main] audio-pcm frame #13000, samples=256, peak=0.0218
+[main] audio-pcm frame #13500, samples=256, peak=0.0175
+[main] audio-pcm frame #14000, samples=256, peak=0.0158
+[main] audio-pcm frame #14500, samples=256, peak=0.0075
+[main] audio-pcm frame #15000, samples=256, peak=0.0045
+[main] audio-pcm frame #15500, samples=256, peak=0.0070
+[main] audio-pcm frame #16000, samples=256, peak=0.0027
+[main] audio-pcm frame #16500, samples=256, peak=0.0018
+[main] audio-pcm frame #17000, samples=256, peak=0.0142
+[main] audio-pcm frame #17500, samples=256, peak=0.0225
+[main] audio-pcm frame #18000, samples=256, peak=0.0024
+[main] audio-pcm frame #18500, samples=256, peak=0.0017
+[main] audio-pcm frame #19000, samples=256, peak=0.0127
+[main] audio-pcm frame #19500, samples=256, peak=0.0018
+[main] audio-pcm frame #20000, samples=256, peak=0.0005
+[main] audio-pcm frame #20500, samples=256, peak=0.0013
+[main] audio-pcm frame #21000, samples=256, peak=0.0070
+[main] audio-pcm frame #21500, samples=256, peak=0.0050
+[main] audio-pcm frame #22000, samples=256, peak=0.0195
+[main] audio-pcm frame #22500, samples=256, peak=0.0084
+[main] audio-pcm frame #23000, samples=256, peak=0.0221
+[main] audio-pcm frame #23500, samples=256, peak=0.0241
+[main] audio-pcm frame #24000, samples=256, peak=0.0109
+[main] audio-pcm frame #24500, samples=256, peak=0.0141
+[main] audio-pcm frame #25000, samples=256, peak=0.0087
+[main] audio-pcm frame #25500, samples=256, peak=0.0019
+[main] audio-pcm frame #26000, samples=256, peak=0.0104
+[main] audio-pcm frame #26500, samples=256, peak=0.0117
+[main] audio-pcm frame #27000, samples=256, peak=0.0022
+[main] audio-pcm frame #27500, samples=256, peak=0.0060
+[main] audio-pcm frame #28000, samples=256, peak=0.0094
+[main] audio-pcm frame #28500, samples=256, peak=0.0115
+[main] audio-pcm frame #29000, samples=256, peak=0.0172
+[main] audio-pcm frame #29500, samples=256, peak=0.0147
+[main] audio-pcm frame #30000, samples=256, peak=0.0142
+[main] audio-pcm frame #30500, samples=256, peak=0.0154
+[main] audio-pcm frame #31000, samples=256, peak=0.0118
+[main] audio-pcm frame #31500, samples=256, peak=0.0079
+[main] audio-pcm frame #32000, samples=256, peak=0.0002
+[main] audio-pcm frame #32500, samples=256, peak=0.0001
+[main] audio-pcm frame #33000, samples=256, peak=0.0001
+[main] audio-pcm frame #33500, samples=256, peak=0.0001
+[main] audio-pcm frame #34000, samples=256, peak=0.0034
+[main] audio-pcm frame #34500, samples=256, peak=0.0002
+[main] audio-pcm frame #35000, samples=256, peak=0.0040
+[main] audio-pcm frame #35500, samples=256, peak=0.0007
+[main] audio-pcm frame #36000, samples=256, peak=0.0050
+[main] audio-pcm frame #36500, samples=256, peak=0.0038
+[main] audio-pcm frame #37000, samples=256, peak=0.0042
+[main] audio-pcm frame #37500, samples=256, peak=0.0049
+[main] audio-pcm frame #38000, samples=256, peak=0.0192
+[main] audio-pcm frame #38500, samples=256, peak=0.0114
+[main] audio-pcm frame #39000, samples=256, peak=0.0086
+[main] audio-pcm frame #39500, samples=256, peak=0.0085
+[main] audio-pcm frame #40000, samples=256, peak=0.0022
+[main] audio-pcm frame #40500, samples=256, peak=0.0050
+[main] audio-pcm frame #41000, samples=256, peak=0.0116
+[main] audio-pcm frame #41500, samples=256, peak=0.0138
+[main] audio-pcm frame #42000, samples=256, peak=0.0259
+[main] audio-pcm frame #42500, samples=256, peak=0.0190
+[main] audio-pcm frame #43000, samples=256, peak=0.0064
+[main] audio-pcm frame #43500, samples=256, peak=0.0081
+[main] audio-pcm frame #44000, samples=256, peak=0.0163
+[main] audio-pcm frame #44500, samples=256, peak=0.0048
+[main] audio-pcm frame #45000, samples=256, peak=0.0013
+[main] audio-pcm frame #45500, samples=256, peak=0.0010
+[main] audio-pcm frame #46000, samples=256, peak=0.0003
+[main] audio-pcm frame #46500, samples=256, peak=0.0032
