@@ -27,6 +27,11 @@
     "appId": "com.discord-screen-bridge.app",
     "productName": "Discord Screen Bridge",
     "forceCodeSigning": false,
+    "publish": {
+      "provider": "github",
+      "owner": "AnEntrypoint",
+      "repo": "jerryrig"
+    },
     "files": [
       "src/**/*",
       "node_modules/**/*",
