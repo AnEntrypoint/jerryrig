@@ -1,4 +1,6 @@
+console.log('[preload] script start')
 const { ipcRenderer } = require('electron')
+ipcRenderer.send('log', '[preload] loaded on ' + location.href.slice(0, 60))
 
 const SAMPLE_RATE = 48000
 
@@ -7,40 +9,44 @@ let captureGen = 0
 let workletNode = null
 
 void (function spoofBrowserEnv() {
-  Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true })
-  Object.defineProperty(navigator, 'plugins', {
-    get: () => {
-      const arr = [
-        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
-        { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
-      ]
-      arr.__proto__ = PluginArray.prototype
-      return arr
-    },
-    configurable: true,
-  })
-  Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true })
   try {
-    const _getParameter = WebGLRenderingContext.prototype.getParameter
-    WebGLRenderingContext.prototype.getParameter = function (param) {
-      if (param === 37445) return 'Intel Inc.'
-      if (param === 37446) return 'Intel Iris OpenGL Engine'
-      return _getParameter.call(this, param)
-    }
-  } catch (_) {}
-  try {
-    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true })
-    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true })
-    Object.defineProperty(navigator, 'platform', { get: () => 'Win32', configurable: true })
-    Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.', configurable: true })
-    Object.defineProperty(navigator, 'appVersion', {
-      get: () => '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true })
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => {
+        const arr = [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+          { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
+        ]
+        try { arr.__proto__ = PluginArray.prototype } catch (_) {}
+        return arr
+      },
       configurable: true,
     })
-  } catch (_) {}
-  delete window.electron
-  delete window.__electronjs
+    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true })
+    try {
+      const _getParameter = WebGLRenderingContext.prototype.getParameter
+      WebGLRenderingContext.prototype.getParameter = function (param) {
+        if (param === 37445) return 'Intel Inc.'
+        if (param === 37446) return 'Intel Iris OpenGL Engine'
+        return _getParameter.call(this, param)
+      }
+    } catch (_) {}
+    try {
+      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8, configurable: true })
+      Object.defineProperty(navigator, 'deviceMemory', { get: () => 8, configurable: true })
+      Object.defineProperty(navigator, 'platform', { get: () => 'Win32', configurable: true })
+      Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.', configurable: true })
+      Object.defineProperty(navigator, 'appVersion', {
+        get: () => '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        configurable: true,
+      })
+    } catch (_) {}
+    delete window.electron
+    delete window.__electronjs
+  } catch (e) {
+    console.error('[preload] spoofBrowserEnv error:', e.message)
+  }
 })()
 
 function normalizeUrl(raw) {
@@ -175,7 +181,8 @@ async function buildCaptureGraph() {
   captureCtx = ctx
   ctx.resume().catch(() => {})
 
-  const workletUrl = 'file://' + __dirname.replace(/\\/g, '/') + '/capture-worklet.js'
+  const preloadDir = (process.argv.find(a => a.startsWith('--preload-dir=')) || '').slice('--preload-dir='.length)
+  const workletUrl = 'file:///' + preloadDir + '/capture-worklet.js'
   await ctx.audioWorklet.addModule(workletUrl)
 
   const node = new AudioWorkletNode(ctx, 'capture-processor')
@@ -251,7 +258,12 @@ async function startCapture() {
   if (captureGen !== gen) return
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; workletNode = null }
 
-  await buildCaptureGraph()
+  try {
+    await buildCaptureGraph()
+  } catch (e) {
+    ipcRenderer.send('log', '[capture] buildCaptureGraph failed: ' + e.message)
+    return
+  }
   patchAudioNodeConnect()
 
   const rescan = setInterval(() => {

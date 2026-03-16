@@ -36,6 +36,13 @@ function createWindow() {
     callback(true)
   })
   mainSession.setPermissionCheckHandler(() => true)
+  mainSession.webRequest.onHeadersReceived((details, callback) => {
+    const headers = details.responseHeaders
+    if (!headers) { callback({}); return }
+    delete headers['content-security-policy']
+    delete headers['Content-Security-Policy']
+    callback({ responseHeaders: headers })
+  })
   mainSession.setUserAgent(CHROME_UA)
   mainSession.webRequest.onBeforeSendHeaders((details, callback) => {
     const h = details.requestHeaders
@@ -47,6 +54,8 @@ function createWindow() {
     callback({ requestHeaders: h })
   })
 
+  const preloadDir = path.join(__dirname, 'electron').replace(/\\/g, '/')
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
@@ -54,6 +63,7 @@ function createWindow() {
     title: WINDOW_TITLE,
     webPreferences: {
       preload: path.join(__dirname, 'electron', 'preload.cjs'),
+      additionalArguments: ['--preload-dir=' + preloadDir],
       contextIsolation: false,
       autoplayPolicy: 'no-user-gesture-required',
       webSecurity: false,
