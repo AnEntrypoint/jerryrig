@@ -71,12 +71,9 @@ function injectNavBar() {
   bar.appendChild(goBtn)
   document.documentElement.insertBefore(bar, document.body)
 
-  document.documentElement.style.boxSizing = 'border-box'
-  document.documentElement.style.paddingTop = '36px'
-  if (document.body) {
-    document.body.style.boxSizing = 'border-box'
-    document.body.style.paddingTop = '36px'
-  }
+  const style = document.createElement('style')
+  style.textContent = 'html { padding-top: 36px !important; box-sizing: border-box !important; }'
+  document.head.appendChild(style)
 
   window.addEventListener('popstate', () => {
     const el = document.getElementById('_gm_navbar_url')

@@ -4,7 +4,7 @@ const SAMPLE_RATE = 48000
 
 let captureCtx = null
 let captureGen = 0
-let scriptNode = null
+let workletNode = null
 
 window._gmNav = {
   back: () => ipcRenderer.send('nav-back'),
@@ -16,25 +16,41 @@ ipcRenderer.on('start-capture', () => startCapture())
 ipcRenderer.on('reset-capture', () => {
   captureGen++
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null }
-  scriptNode = null
+  workletNode = null
 })
 
-function buildCaptureGraph() {
+async function buildCaptureGraph() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE })
   captureCtx = ctx
   ctx.resume().catch(() => {})
 
-  const node = ctx.createScriptProcessor(4096, 2, 2)
-  scriptNode = node
+  const workletCode = `
+class CaptureProcessor extends AudioWorkletProcessor {
+  process(inputs) {
+    const input = inputs[0]
+    if (input && input[0]) {
+      const L = input[0], R = input[1] || input[0]
+      const out = new Float32Array(L.length * 2)
+      for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
+      this.port.postMessage(out.buffer, [out.buffer])
+    }
+    return true
+  }
+}
+registerProcessor('capture-processor', CaptureProcessor)
+`
+  const blob = new Blob([workletCode], { type: 'application/javascript' })
+  const url = URL.createObjectURL(blob)
+  await ctx.audioWorklet.addModule(url)
+  URL.revokeObjectURL(url)
+
+  const node = new AudioWorkletNode(ctx, 'capture-processor')
+  workletNode = node
   let _count = 0
-  node.onaudioprocess = (e) => {
-    const L = e.inputBuffer.getChannelData(0)
-    const R = e.inputBuffer.getChannelData(1)
-    const out = new Float32Array(L.length * 2)
-    for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
+  node.port.onmessage = (e) => {
     _count++
     if (_count <= 3 || _count % 500 === 0) ipcRenderer.send('log', '[capture] frame #' + _count)
-    ipcRenderer.send('audio-pcm', out.buffer)
+    ipcRenderer.send('audio-pcm', e.data)
   }
 
   const silencer = ctx.createGain()
@@ -58,7 +74,7 @@ function connectMediaEl(el) {
   el._gmCaptured = true
   try {
     const src = captureCtx.createMediaElementSource(el)
-    src.connect(scriptNode)
+    src.connect(workletNode)
     ipcRenderer.send('log', '[capture] media element connected: ' + (el.src || el.currentSrc || 'unknown').slice(0, 80))
   } catch (e) {
     ipcRenderer.send('log', '[capture] media element connect failed: ' + e.message)
@@ -71,7 +87,7 @@ function patchAudioNodeConnect(ctx) {
   AudioNode.prototype.connect = function(target, outIdx, inIdx) {
     if (target instanceof AudioDestinationNode && target === ctx.destination) {
       const r = outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
-      _orig.call(this, scriptNode, outIdx !== undefined ? outIdx : 0)
+      _orig.call(this, workletNode, outIdx !== undefined ? outIdx : 0)
       return r
     }
     return outIdx !== undefined ? _orig.call(this, target, outIdx, inIdx !== undefined ? inIdx : 0) : _orig.call(this, target)
@@ -101,9 +117,9 @@ async function startCapture() {
 
   await new Promise(r => setTimeout(r, 500))
   if (captureGen !== gen) return
-  if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; scriptNode = null }
+  if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; workletNode = null }
 
-  buildCaptureGraph()
+  await buildCaptureGraph()
   patchAudioNodeConnect(captureCtx)
 
   if (document.readyState === 'loading') {
