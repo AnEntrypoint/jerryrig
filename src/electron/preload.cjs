@@ -3,8 +3,12 @@ const { ipcRenderer, contextBridge } = require('electron')
 const CHANNELS = 2
 const SAMPLE_RATE = 48000
 
+const NativeAudioContext = window.AudioContext || window.webkitAudioContext
+
 let playCtx = null
 let captureCtx = null
+let captureWorklet = null
+let captureStarting = false
 const nextPlayTime = {}
 
 const WORKLET_CODE = `
@@ -23,7 +27,7 @@ const WORKLET_CODE = `
 `
 
 function getPlayCtx() {
-  if (!playCtx) playCtx = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' })
+  if (!playCtx) playCtx = new NativeAudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' })
   if (playCtx.state === 'suspended') playCtx.resume()
   return playCtx
 }
@@ -34,86 +38,107 @@ contextBridge.exposeInMainWorld('_gmNav', {
   go: (url) => ipcRenderer.send('nav-go', url),
 })
 
-ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
-  const ctx = getPlayCtx()
-  const f32 = new Float32Array(data)
-  const samplesPerCh = Math.floor(f32.length / CHANNELS)
-  if (!samplesPerCh) return
-  const buf = ctx.createBuffer(CHANNELS, samplesPerCh, SAMPLE_RATE)
-  for (let ch = 0; ch < CHANNELS; ch++) {
-    const cd = buf.getChannelData(ch)
-    for (let i = 0; i < samplesPerCh; i++) cd[i] = f32[i * CHANNELS + ch]
-  }
-  const src = ctx.createBufferSource()
-  src.buffer = buf
-  src.connect(ctx.destination)
-  const now = ctx.currentTime
-  if (!nextPlayTime[userId] || nextPlayTime[userId] < now) nextPlayTime[userId] = now + 0.06
-  src.start(nextPlayTime[userId])
-  nextPlayTime[userId] += buf.duration
-})
 
 ipcRenderer.on('start-capture', () => startCapture())
-
 ipcRenderer.on('reset-capture', () => resetCapture())
 
 function resetCapture() {
+  captureStarting = false
+  captureWorklet = null
   if (captureCtx) {
     captureCtx.close().catch(() => {})
     captureCtx = null
   }
 }
 
-async function buildWorklet(ctx) {
-  const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' })
-  const url = URL.createObjectURL(blob)
-  await ctx.audioWorklet.addModule(url)
-  URL.revokeObjectURL(url)
-  const worklet = new AudioWorkletNode(ctx, 'pcm-capture', {
-    numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [CHANNELS],
-  })
-  worklet.port.onmessage = (e) => ipcRenderer.send('audio-pcm', e.data)
-  return worklet
+const tappedElements = new WeakSet()
+const tappedPageCtxs = new WeakSet()
+
+function tapElement(el) {
+  if (tappedElements.has(el) || !captureCtx || !captureWorklet) return
+  tappedElements.add(el)
+  try {
+    captureCtx.createMediaElementSource(el).connect(captureWorklet)
+    ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via MediaElementSource')
+  } catch {
+    try {
+      const stream = el.captureStream ? el.captureStream() : el.mozCaptureStream()
+      captureCtx.createMediaStreamSource(stream).connect(captureWorklet)
+      ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via captureStream')
+    } catch (e2) {
+      ipcRenderer.send('log', '[capture] tap failed: ' + e2.message)
+    }
+  }
+}
+
+function tapPageCtx(pageCtx) {
+  if (!pageCtx || tappedPageCtxs.has(pageCtx) || pageCtx === captureCtx || pageCtx === playCtx || !captureCtx || !captureWorklet) return
+  tappedPageCtxs.add(pageCtx)
+  try {
+    const dest = pageCtx.createMediaStreamDestination()
+    const tap = pageCtx.createGain()
+    tap.connect(dest)
+    captureCtx.createMediaStreamSource(dest.stream).connect(captureWorklet)
+    ipcRenderer.send('log', '[capture] tapped page AudioContext via MediaStreamDestination')
+
+    const _origConnect = AudioNode.prototype.connect
+    AudioNode.prototype.connect = function (target, ...args) {
+      if (this.context === pageCtx && target === pageCtx.destination) {
+        try { _origConnect.call(this, tap, ...args) } catch {}
+      }
+      return _origConnect.call(this, target, ...args)
+    }
+  } catch (e) {
+    ipcRenderer.send('log', '[capture] pageCtx tap failed: ' + e.message)
+  }
+}
+
+if (NativeAudioContext) {
+  window.AudioContext = window.webkitAudioContext = function (...args) {
+    const ctx = new NativeAudioContext(...args)
+    setTimeout(() => tapPageCtx(ctx), 0)
+    return ctx
+  }
+  window.AudioContext.prototype = NativeAudioContext.prototype
 }
 
 async function startCapture() {
   resetCapture()
-  captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
-  await captureCtx.resume()
+  captureStarting = true
 
-  const worklet = await buildWorklet(captureCtx).catch((err) => {
+  const ctx = new NativeAudioContext({ sampleRate: SAMPLE_RATE })
+  captureCtx = ctx
+  await ctx.resume()
+
+  const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' })
+  const url = URL.createObjectURL(blob)
+  let worklet = null
+  try {
+    await ctx.audioWorklet.addModule(url)
+    worklet = new AudioWorkletNode(ctx, 'pcm-capture', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [CHANNELS],
+    })
+    worklet.port.onmessage = (e) => ipcRenderer.send('audio-pcm', e.data)
+  } catch (err) {
     ipcRenderer.send('log', '[capture] worklet failed: ' + err.message)
-    captureCtx = null
-    return null
-  })
-  if (!worklet || !captureCtx) return
-
-  const silencer = captureCtx.createGain()
-  silencer.gain.value = 0
-  worklet.connect(silencer)
-  silencer.connect(captureCtx.destination)
-
-  const tapped = new WeakSet()
-
-  function tapElement(el) {
-    if (tapped.has(el)) return
-    tapped.add(el)
-    try {
-      captureCtx.createMediaElementSource(el).connect(worklet)
-      ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via MediaElementSource')
-    } catch (e) {
-      try {
-        const stream = el.captureStream ? el.captureStream() : el.mozCaptureStream()
-        captureCtx.createMediaStreamSource(stream).connect(worklet)
-        ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> via captureStream')
-      } catch (e2) {
-        ipcRenderer.send('log', '[capture] tap failed: ' + e2.message)
-      }
-    }
+  } finally {
+    URL.revokeObjectURL(url)
   }
 
-  document.querySelectorAll('audio,video').forEach(tapElement)
+  if (!worklet || !captureStarting || captureCtx !== ctx) {
+    ctx.close().catch(() => {})
+    return
+  }
 
+  captureStarting = false
+  captureWorklet = worklet
+
+  const silencer = ctx.createGain()
+  silencer.gain.value = 0
+  worklet.connect(silencer)
+  silencer.connect(ctx.destination)
+
+  document.querySelectorAll('audio,video').forEach(tapElement)
   new MutationObserver((muts) => {
     for (const m of muts)
       for (const n of m.addedNodes) {
@@ -123,5 +148,5 @@ async function startCapture() {
       }
   }).observe(document.documentElement, { childList: true, subtree: true })
 
-  ipcRenderer.send('log', '[capture] MediaElement strategy active, elements=' + document.querySelectorAll('audio,video').length)
+  ipcRenderer.send('log', '[capture] active, elements=' + document.querySelectorAll('audio,video').length)
 }
