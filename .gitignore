@@ -1,8 +1,6 @@
 .gm-stop-verified
 node_modules/
 package-lock.json
-.env  
-
-.code-search/'logs.txt'  
-'.code-search/'  
-'logs.txt'  
+.env
+.code-search/
+logs.txt
