@@ -71,10 +71,12 @@ function injectNavBar() {
   bar.appendChild(goBtn)
   document.documentElement.insertBefore(bar, document.body)
 
-  const spacer = document.createElement('div')
-  spacer.id = '_gm_navbar_spacer'
-  spacer.style.cssText = 'height:36px;display:block;'
-  if (document.body) document.body.insertBefore(spacer, document.body.firstChild)
+  document.documentElement.style.boxSizing = 'border-box'
+  document.documentElement.style.paddingTop = '36px'
+  if (document.body) {
+    document.body.style.boxSizing = 'border-box'
+    document.body.style.paddingTop = '36px'
+  }
 
   window.addEventListener('popstate', () => {
     const el = document.getElementById('_gm_navbar_url')

@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits } from 'discord.js'
-import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice'
+import { joinVoiceChannel, EndBehaviorType, VoiceConnectionStatus, entersState, getVoiceConnection } from '@discordjs/voice'
 import prism from 'prism-media'
 
 let voiceConnection = null
@@ -9,6 +9,61 @@ function createClient() {
   return new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
   })
+}
+
+function _destroyExisting(guildId) {
+  const existing = getVoiceConnection(guildId)
+  if (existing) {
+    console.log('[client] destroying existing voice connection for guild', guildId)
+    try { existing.destroy() } catch {}
+  }
+  if (voiceConnection && voiceConnection !== existing) {
+    try { voiceConnection.destroy() } catch {}
+  }
+  voiceConnection = null
+  voiceReceiver = null
+}
+
+async function _tryJoin(channel, guild, attempt) {
+  console.log(`[client] join attempt ${attempt}`)
+  const conn = joinVoiceChannel({
+    channelId: channel.id,
+    guildId: guild.id,
+    adapterCreator: guild.voiceAdapterCreator,
+    selfDeaf: false,
+    selfMute: false,
+    debug: true,
+  })
+
+  let closeCode = null
+  conn.on('stateChange', (oldState, newState) => {
+    if (newState.networking && newState.networking !== oldState.networking) {
+      const opts = newState.networking._state?.connectionOptions ?? newState.networking.state?.connectionOptions
+      if (opts) console.log('[client] voice endpoint:', opts.endpoint, 'token:', opts.token?.slice(0,8)+'...')
+      newState.networking.on('close', (evt) => {
+        const code = typeof evt === 'object' ? (evt.code ?? evt) : evt
+        const reason = typeof evt === 'object' ? evt.reason : ''
+        closeCode = code
+        console.log('[client] voice WS closed, code:', code, 'reason:', reason?.toString?.() || '(none)')
+      })
+      newState.networking.on('debug', (msg) => console.log('[net]', msg.slice(0,400)))
+    }
+    const oldNet = oldState.networking?.state
+    const newNet = newState.networking?.state
+    if (oldNet?.code !== newNet?.code) {
+      const names = { 0:'OpeningWs', 1:'Identifying', 2:'UdpHandshaking', 3:'SelectingProtocol', 4:'Ready', 5:'Resuming', 6:'Closed' }
+      console.log(`[client] networking: ${names[oldNet?.code] ?? oldNet?.code ?? '?'} -> ${names[newNet?.code] ?? newNet?.code ?? '?'}`)
+    }
+  })
+
+  try {
+    await entersState(conn, VoiceConnectionStatus.Ready, 15_000)
+    console.log('[client] voice connection Ready')
+    return conn
+  } catch (err) {
+    try { conn.destroy() } catch {}
+    throw Object.assign(new Error(`Join failed: ${err.message}`), { closeCode })
+  }
 }
 
 async function joinDiscordVoice(client, guildId, channelId) {
@@ -23,16 +78,66 @@ async function joinDiscordVoice(client, guildId, channelId) {
   }
   if (!channel) throw new Error(`Channel ${channelId} not found`)
 
-  voiceConnection = joinVoiceChannel({
-    channelId: channel.id,
-    guildId: guild.id,
-    adapterCreator: guild.voiceAdapterCreator,
-    selfDeaf: false,
-    selfMute: false,
+  _destroyExisting(guildId)
+
+  // Send voice leave via gateway to clear any stale session on Discord's side
+  console.log('[client] sending voice leave to clear stale session...')
+  try {
+    client.ws.broadcast({
+      op: 4,
+      d: { guild_id: guildId, channel_id: null, self_deaf: false, self_mute: false },
+    })
+  } catch (e) {
+    console.log('[client] leave send error (non-fatal):', e.message)
+  }
+  // Wait for Discord to confirm the leave via VoiceStateUpdate, with a timeout fallback
+  await new Promise(r => {
+    const onVoiceState = (oldState, newState) => {
+      if (newState.guild?.id === guildId && newState.channelId === null) {
+        client.off('voiceStateUpdate', onVoiceState)
+        clearTimeout(timer)
+        console.log('[client] voice leave confirmed by Discord')
+        r()
+      }
+    }
+    const timer = setTimeout(() => {
+      client.off('voiceStateUpdate', onVoiceState)
+      console.log('[client] voice leave not confirmed, proceeding after timeout')
+      r()
+    }, 5000)
+    client.on('voiceStateUpdate', onVoiceState)
   })
 
-  voiceReceiver = voiceConnection.receiver
-  return { voiceConnection, voiceReceiver }
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      voiceConnection = await _tryJoin(channel, guild, attempt)
+      voiceReceiver = voiceConnection.receiver
+
+      voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
+        console.log('[client] disconnected, attempting rejoin')
+        try {
+          await Promise.race([
+            entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
+            entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
+          ])
+        } catch {
+          voiceConnection.destroy()
+        }
+      })
+
+      return { voiceConnection, voiceReceiver }
+    } catch (err) {
+      console.log(`[client] attempt ${attempt} failed: ${err.message}, closeCode=${err.closeCode}`)
+      if (attempt < 3) {
+        const delay = err.closeCode === 4017 ? 8000 : 2000
+        console.log(`[client] waiting ${delay}ms before retry...`)
+        await new Promise(r => setTimeout(r, delay))
+        _destroyExisting(guildId)
+      }
+    }
+  }
+
+  throw new Error('Voice connection failed after 5 attempts')
 }
 
 function subscribeToSpeaker(userId, onPcmChunk) {

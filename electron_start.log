@@ -1,0 +1,368 @@
+
+> discord-screen-bridge@1.0.0 start
+> electron .
+
+
+[main] did-finish-load, injecting navbar + start-capture
+[renderer] [capture] video found, readyState=4 paused=false src=https://commondatastorage.googleapis.com/gtv-videos-bucket/s
+[renderer] [capture] AudioWorklet capture started, ctx state=running
+[main] audio-pcm frame #1, samples=256, peak=0.0000
+[main] audio-pcm frame #2, samples=256, peak=0.0000
+[main] audio-pcm frame #3, samples=256, peak=0.0000
+[main] audio-pcm frame #4, samples=256, peak=0.0000
+[main] audio-pcm frame #5, samples=256, peak=0.0000
+[main] audio-pcm frame #500, samples=256, peak=0.0025
+[bot] Logged in as memobot#9647
+[client] sending voice leave to clear stale session...
+(node:151948) DeprecationWarning: The ready event has been renamed to clientReady to distinguish it from the gateway READY event and will only emit under that name in v15. Please use clientReady instead.
+(Use `electron --trace-deprecation ...` to show where the warning was created)
+[main] audio-pcm frame #1000, samples=256, peak=0.0038
+[main] audio-pcm frame #1500, samples=256, peak=0.0102
+[main] audio-pcm frame #2000, samples=256, peak=0.0039
+[main] audio-pcm frame #2500, samples=256, peak=0.0026
+[client] voice leave not confirmed, proceeding after timeout
+[client] join attempt 1
+[client] voice endpoint: c-iad16-f4bf9a07.discord.media:2053 token: 75a58d19...
+[client] networking: ? -> OpeningWs
+[main] audio-pcm frame #3000, samples=256, peak=0.0060
+[net] [WS] >> {"op":0,"d":{"server_id":"367741339393327104","user_id":"502921403385774090","session_id":"316c1e64fbc42afb09553ea74332a118","token":"75a58d192294bc9a","max_dave_protocol_version":1}}
+[net] state change:
+from {"code":0,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"367741339393327104","token":"75a58d192294bc9a","sessionId":"316c1e64fbc42afb09553ea74332a118","userId":"502921403385774090","channelId":"1070605940530880562"},"udp":false}
+to {"code":1,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"36
+[net] [WS] << {"op":8,"d":{"v":8,"heartbeat_interval":13750}}
+[net] [WS] << {"op":2,"d":{"streams":[{"type":"video","ssrc":4412,"rtx_ssrc":4413,"rid":"","quality":0,"active":false}],"ssrc":4411,"port":19312,"modes":["aead_aes256_gcm_rtpsize","aead_xchacha20_poly1305_rtpsize"],"ip":"104.29.155.35","experiments":["fixed_keyframe_interval"]}}
+[net] state change:
+from {"code":1,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"367741339393327104","token":"75a58d192294bc9a","sessionId":"316c1e64fbc42afb09553ea74332a118","userId":"502921403385774090","channelId":"1070605940530880562"},"udp":false}
+to {"code":2,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"36
+[net] [WS] << {"seq":0,"op":11,"d":{"user_ids":["336904195619815425"]}}
+[net] [WS] << {"seq":1,"op":5,"d":{"user_id":"336904195619815425","ssrc":4403,"speaking":1}}
+[net] [WS] << {"seq":2,"op":18,"d":{"user_id":"336904195619815425","flags":2}}
+[net] [WS] << {"seq":3,"op":20,"d":{"user_id":"336904195619815425","platform":0}}
+[main] audio-pcm frame #3500, samples=256, peak=0.0216
+[net] [WS] >> {"op":1,"d":{"protocol":"udp","data":{"address":"41.114.25.185","port":7798,"mode":"aead_aes256_gcm_rtpsize"}}}
+[net] state change:
+from {"code":2,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"367741339393327104","token":"75a58d192294bc9a","sessionId":"316c1e64fbc42afb09553ea74332a118","userId":"502921403385774090","channelId":"1070605940530880562"},"udp":true,"connectionData":{"ssrc":4411,"connectedClients":{}}}
+to {"code":3,"ws":true,"connectionOptions":{"endpoint":
+[net] [WS] << {"op":4,"d":{"video_codec":"H264","secure_frames_version":1,"secret_key":[210,170,171,241,170,138,54,217,163,13,81,76,44,220,145,127,101,95,42,71,236,52,48,32,132,79,109,26,9,178,56,233],"mode":"aead_aes256_gcm_rtpsize","media_session_id":"3d2d0a7b578f213bc2e9ca0adbdea889","dave_protocol_version":1,"audio_codec":"opus"}}
+[net] [DAVE] Session initialized for protocol version 1
+[net] [WS] >> [bin] opcode 26, 391 bytes
+[net] state change:
+from {"code":3,"ws":true,"connectionOptions":{"endpoint":"c-iad16-f4bf9a07.discord.media:2053","serverId":"367741339393327104","token":"75a58d192294bc9a","sessionId":"316c1e64fbc42afb09553ea74332a118","userId":"502921403385774090","channelId":"1070605940530880562"},"udp":true,"connectionData":{"ssrc":4411,"connectedClients":{}}}
+to {"code":4,"ws":true,"connectionOptions":{"endpoint":
+[client] voice connection Ready
+[bot] Joined voice channel
+[voice] connection state on init: ready
+[voice] connection: ready -> ready
+[voice] player: idle -> buffering
+[voice] player started, playing 5s test tone at 440Hz
+[bot] Audio bridge ready — outbound: Electron audio -> Discord, inbound: Discord -> Electron
+[net] [WS] << {"seq":4,"op":15,"d":{"any":100}}
+[net] [WS] << [bin] opcode 25, seq 5, 71 bytes
+[net] [DAVE] Set MLS external sender
+[net] [WS] << [bin] opcode 27, seq 6, 498 bytes
+[net] [DAVE] MLS proposals processed
+[net] [WS] >> [bin] opcode 28, 1161 bytes
+[voice] player: buffering -> playing
+[voice] push #1, bytes=512, peak=0.0533, player=playing
+[voice] push #2, bytes=512, peak=0.0815, player=playing
+[voice] push #3, bytes=512, peak=0.0873, player=playing
+[voice] push #4, bytes=512, peak=0.0870, player=playing
+[voice] push #5, bytes=512, peak=0.0645, player=playing
+[net] [WS] >> {"op":5,"d":{"speaking":1,"delay":0,"ssrc":4411}}
+[net] [WS] << [bin] opcode 29, seq 7, 205 bytes
+[net] [DAVE] MLS commit processed (transition id: 0)
+[main] audio-pcm frame #4000, samples=256, peak=0.0253
+[voice] push #500, bytes=512, peak=0.0371, player=playing
+[main] audio-pcm frame #4500, samples=256, peak=0.0305
+[voice] push #1000, bytes=512, peak=0.0370, player=playing
+[voice] test tone complete
+[main] audio-pcm frame #5000, samples=256, peak=0.0613
+[voice] push #1500, bytes=512, peak=0.0334, player=playing
+[main] audio-pcm frame #5500, samples=256, peak=0.0402
+[voice] push #2000, bytes=512, peak=0.0313, player=playing
+[main] audio-pcm frame #6000, samples=256, peak=0.0095
+[voice] push #2500, bytes=512, peak=0.0507, player=playing
+[main] audio-pcm frame #6500, samples=256, peak=0.0354
+[voice] push #3000, bytes=512, peak=0.0337, player=playing
+[main] audio-pcm frame #7000, samples=256, peak=0.0112
+[voice] push #3500, bytes=512, peak=0.0147, player=playing
+[main] audio-pcm frame #7500, samples=256, peak=0.0464
+[voice] push #4000, bytes=512, peak=0.1052, player=playing
+[main] audio-pcm frame #8000, samples=256, peak=0.0038
+[voice] push #4500, bytes=512, peak=0.0244, player=playing
+[main] audio-pcm frame #8500, samples=256, peak=0.0021
+[net] [WS] >> {"op":3,"d":{"t":1773656172429,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656172429}}
+[voice] push #5000, bytes=512, peak=0.0070, player=playing
+[main] audio-pcm frame #9000, samples=256, peak=0.0063
+[voice] push #5500, bytes=512, peak=0.0075, player=playing
+[main] audio-pcm frame #9500, samples=256, peak=0.0039
+[voice] push #6000, bytes=512, peak=0.0069, player=playing
+[main] audio-pcm frame #10000, samples=256, peak=0.0061
+[voice] push #6500, bytes=512, peak=0.0085, player=playing
+[main] audio-pcm frame #10500, samples=256, peak=0.0042
+[voice] push #7000, bytes=512, peak=0.0059, player=playing
+[main] audio-pcm frame #11000, samples=256, peak=0.0055
+[voice] push #7500, bytes=512, peak=0.0065, player=playing
+[main] audio-pcm frame #11500, samples=256, peak=0.0033
+[voice] push #8000, bytes=512, peak=0.0061, player=playing
+[main] audio-pcm frame #12000, samples=256, peak=0.0097
+[voice] push #8500, bytes=512, peak=0.0132, player=playing
+[main] audio-pcm frame #12500, samples=256, peak=0.0102
+[voice] push #9000, bytes=512, peak=0.0200, player=playing
+[main] audio-pcm frame #13000, samples=256, peak=0.0218
+[voice] push #9500, bytes=512, peak=0.0229, player=playing
+[main] audio-pcm frame #13500, samples=256, peak=0.0175
+[net] [WS] >> {"op":3,"d":{"t":1773656186178,"seq_ack":7}}
+[voice] push #10000, bytes=512, peak=0.0319, player=playing
+[net] [WS] << {"op":6,"d":{"t":1773656186178}}
+[main] audio-pcm frame #14000, samples=256, peak=0.0158
+[voice] push #10500, bytes=512, peak=0.0114, player=playing
+[main] audio-pcm frame #14500, samples=256, peak=0.0075
+[voice] push #11000, bytes=512, peak=0.0093, player=playing
+[main] audio-pcm frame #15000, samples=256, peak=0.0045
+[voice] push #11500, bytes=512, peak=0.0056, player=playing
+[main] audio-pcm frame #15500, samples=256, peak=0.0070
+[voice] push #12000, bytes=512, peak=0.0041, player=playing
+[main] audio-pcm frame #16000, samples=256, peak=0.0027
+[voice] push #12500, bytes=512, peak=0.0032, player=playing
+[main] audio-pcm frame #16500, samples=256, peak=0.0018
+[voice] push #13000, bytes=512, peak=0.0017, player=playing
+[main] audio-pcm frame #17000, samples=256, peak=0.0142
+[voice] push #13500, bytes=512, peak=0.0063, player=playing
+[main] audio-pcm frame #17500, samples=256, peak=0.0225
+[voice] push #14000, bytes=512, peak=0.0030, player=playing
+[main] audio-pcm frame #18000, samples=256, peak=0.0024
+[voice] push #14500, bytes=512, peak=0.0049, player=playing
+[main] audio-pcm frame #18500, samples=256, peak=0.0017
+[voice] push #15000, bytes=512, peak=0.0034, player=playing
+[net] [WS] >> {"op":3,"d":{"t":1773656199930,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656199930}}
+[main] audio-pcm frame #19000, samples=256, peak=0.0127
+[voice] push #15500, bytes=512, peak=0.0092, player=playing
+[main] audio-pcm frame #19500, samples=256, peak=0.0018
+[voice] push #16000, bytes=512, peak=0.0060, player=playing
+[main] audio-pcm frame #20000, samples=256, peak=0.0005
+[voice] push #16500, bytes=512, peak=0.0006, player=playing
+[main] audio-pcm frame #20500, samples=256, peak=0.0013
+[voice] push #17000, bytes=512, peak=0.0086, player=playing
+[main] audio-pcm frame #21000, samples=256, peak=0.0070
+[voice] push #17500, bytes=512, peak=0.0226, player=playing
+[main] audio-pcm frame #21500, samples=256, peak=0.0050
+[voice] push #18000, bytes=512, peak=0.0081, player=playing
+[main] audio-pcm frame #22000, samples=256, peak=0.0195
+[voice] push #18500, bytes=512, peak=0.0043, player=playing
+[main] audio-pcm frame #22500, samples=256, peak=0.0084
+[voice] push #19000, bytes=512, peak=0.0179, player=playing
+[main] audio-pcm frame #23000, samples=256, peak=0.0221
+[net] [WS] >> {"op":3,"d":{"t":1773656213680,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656213680}}
+[main] nav-go loadURL failed: ERR_ABORTED (-3) loading 'https://www.youtube.com/?themeRefresh=1'
+[net] [WS] >> {"op":5,"d":{"speaking":0,"delay":0,"ssrc":4411}}
+[voice] player: playing -> idle
+[voice] stream ended, restarting stream
+[voice] player: idle -> buffering
+[main] did-finish-load, injecting navbar + start-capture
+[renderer] [capture] video found, readyState=0 paused=true src=
+[renderer] [capture] AudioWorklet addModule failed: The user aborted a request.
+[net] [WS] >> {"op":3,"d":{"t":1773656227431,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656227431}}
+[net] [WS] >> {"op":3,"d":{"t":1773656241181,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656241181}}
+[net] [WS] >> {"op":3,"d":{"t":1773656254931,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656254931}}
+[net] [WS] >> {"op":3,"d":{"t":1773656268682,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656268682}}
+[net] [WS] >> {"op":3,"d":{"t":1773656282432,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656282432}}
+[net] [WS] >> {"op":3,"d":{"t":1773656296183,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656296183}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656309932,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656309932}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (4 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (5 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (6 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656323683,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656323683}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656337433,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656337433}}
+[net] [WS] >> {"op":3,"d":{"t":1773656351184,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656351184}}
+[net] [WS] >> {"op":3,"d":{"t":1773656364935,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656364935}}
+[net] [WS] >> {"op":3,"d":{"t":1773656378685,"seq_ack":7}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [WS] << {"op":6,"d":{"t":1773656378685}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (4 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (5 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (6 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (7 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (8 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (9 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (10 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (11 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (12 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (4 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656392435,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656392435}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (4 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (5 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656406188,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656406188}}
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (3 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (4 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (5 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (6 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (2 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [DAVE] Failed to decrypt a packet (1 consecutive fails)
+[net] [WS] >> {"op":3,"d":{"t":1773656419937,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656419937}}
+[net] [WS] >> {"op":3,"d":{"t":1773656433688,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656433688}}
+[net] [WS] >> {"op":3,"d":{"t":1773656447438,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656447438}}
+[net] [WS] >> {"op":3,"d":{"t":1773656461190,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656461190}}
+[net] [WS] >> {"op":3,"d":{"t":1773656474941,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656474941}}
+[net] [WS] >> {"op":3,"d":{"t":1773656488691,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656488691}}
+[net] [WS] >> {"op":3,"d":{"t":1773656502441,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656502441}}
+[net] [WS] >> {"op":3,"d":{"t":1773656516192,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656516192}}
+[net] [WS] >> {"op":3,"d":{"t":1773656529942,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656529942}}
+[net] [WS] >> {"op":3,"d":{"t":1773656543693,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656543693}}
+[net] [WS] >> {"op":3,"d":{"t":1773656557443,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656557443}}
+[net] [WS] >> {"op":3,"d":{"t":1773656571193,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656571193}}
+[net] [WS] >> {"op":3,"d":{"t":1773656584943,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656584943}}
+[net] [WS] >> {"op":3,"d":{"t":1773656598694,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656598694}}
+[net] [WS] >> {"op":3,"d":{"t":1773656612444,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656612444}}
+[net] [WS] >> {"op":3,"d":{"t":1773656626194,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656626194}}
+[net] [WS] >> {"op":3,"d":{"t":1773656639943,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656639943}}
+[net] [WS] >> {"op":3,"d":{"t":1773656653693,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656653693}}
+[net] [WS] >> {"op":3,"d":{"t":1773656667443,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656667443}}
+[net] [WS] >> {"op":3,"d":{"t":1773656681193,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656681193}}
+[net] [WS] >> {"op":3,"d":{"t":1773656694944,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656694944}}
+[net] [WS] >> {"op":3,"d":{"t":1773656708694,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656708694}}
+[net] [WS] >> {"op":3,"d":{"t":1773656722444,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656722444}}
+[net] [WS] >> {"op":3,"d":{"t":1773656736209,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656736209}}
+[net] [WS] >> {"op":3,"d":{"t":1773656749960,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656749960}}
+[net] [WS] >> {"op":3,"d":{"t":1773656763711,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656763711}}
+[net] [WS] >> {"op":3,"d":{"t":1773656777462,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656777462}}
+[net] [WS] >> {"op":3,"d":{"t":1773656791211,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656791211}}
+[net] [WS] >> {"op":3,"d":{"t":1773656804962,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656804962}}
+[net] [WS] >> {"op":3,"d":{"t":1773656818714,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656818714}}
+[net] [WS] >> {"op":3,"d":{"t":1773656832464,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656832464}}
+[net] [WS] >> {"op":3,"d":{"t":1773656846214,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656846214}}
+[net] [WS] >> {"op":3,"d":{"t":1773656859964,"seq_ack":7}}
+[net] [WS] << {"op":6,"d":{"t":1773656859964}}
