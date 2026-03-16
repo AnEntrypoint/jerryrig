@@ -121,12 +121,17 @@ function injectNavBar() {
   bar.appendChild(goBtn)
   document.documentElement.insertBefore(bar, document.body)
 
-  document.documentElement.style.setProperty('padding-top', '36px', 'important')
-  document.documentElement.style.setProperty('box-sizing', 'border-box', 'important')
+  const style = document.createElement('style')
+  style.id = '_gm_navbar_style'
+  style.textContent = 'html { margin-top: 36px !important; } body { margin-top: 0 !important; }'
+  document.documentElement.insertBefore(style, document.body)
+
   const obs = new MutationObserver(() => {
-    document.documentElement.style.setProperty('padding-top', '36px', 'important')
+    if (!document.getElementById('_gm_navbar_style')) {
+      document.documentElement.insertBefore(style, document.body)
+    }
   })
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
+  obs.observe(document.documentElement, { childList: true })
 
   window.addEventListener('popstate', () => {
     const el = document.getElementById('_gm_navbar_url')

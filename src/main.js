@@ -54,7 +54,10 @@ function createWindow() {
     callback({ requestHeaders: h })
   })
 
-  const preloadDir = path.join(__dirname, 'electron').replace(/\\/g, '/')
+  const preloadDir = (app.isPackaged
+    ? path.join(process.resourcesPath, 'app', 'src', 'electron')
+    : path.join(__dirname, 'electron')
+  ).replace(/\\/g, '/')
 
   mainWindow = new BrowserWindow({
     width: 1280,
