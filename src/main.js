@@ -48,7 +48,7 @@ function createWindow() {
     title: WINDOW_TITLE,
     webPreferences: {
       preload: path.join(__dirname, 'electron', 'preload.cjs'),
-      contextIsolation: true,
+      contextIsolation: false,
       autoplayPolicy: 'no-user-gesture-required',
       webSecurity: false,
       allowRunningInsecureContent: true,
@@ -83,8 +83,9 @@ function sendAudioToRenderer(userId, f32) {
 
 ipcMain.on('log', (_, msg) => console.log('[renderer]', msg))
 
-ipcMain.handle('get-desktop-source-id', async () => {
+ipcMain.handle('get-screen-source-id', async () => {
   const sources = await desktopCapturer.getSources({ types: ['screen'] })
+  console.log('[main] screen sources:', sources.map(s => s.name))
   return sources[0]?.id || null
 })
 
