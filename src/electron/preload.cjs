@@ -5,7 +5,24 @@ const SAMPLE_RATE = 48000
 
 let playCtx = null
 let captureCtx = null
+let mutationObserver = null
 const nextPlayTime = {}
+const tappedElements = new WeakSet()
+
+const WORKLET_CODE = `
+  class PcmCapture extends AudioWorkletProcessor {
+    process(inputs) {
+      const inp = inputs[0]
+      if (!inp || !inp[0]) return true
+      const L = inp[0], R = inp[1] || inp[0]
+      const out = new Float32Array(L.length * 2)
+      for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
+      this.port.postMessage(out.buffer, [out.buffer])
+      return false
+    }
+  }
+  registerProcessor('pcm-capture', PcmCapture)
+`
 
 function getPlayCtx() {
   if (!playCtx) playCtx = new AudioContext({ sampleRate: SAMPLE_RATE, latencyHint: 'interactive' })
@@ -39,70 +56,77 @@ ipcRenderer.on('audio-chunk', (_, { userId, data }) => {
 })
 
 ipcRenderer.on('start-capture', () => {
+  resetCapture()
   startCapture()
 })
 
 ipcRenderer.on('reset-capture', () => {
+  resetCapture()
+})
+
+function resetCapture() {
+  if (mutationObserver) {
+    mutationObserver.disconnect()
+    mutationObserver = null
+  }
   if (captureCtx) {
     captureCtx.close().catch(() => {})
     captureCtx = null
   }
-})
+}
+
+function tapElement(el, worklet) {
+  if (tappedElements.has(el)) return
+  tappedElements.add(el)
+  try {
+    const src = captureCtx.createMediaElementSource(el)
+    src.connect(worklet)
+    ipcRenderer.send('log', '[capture] tapped <' + el.tagName.toLowerCase() + '> src=' + (el.src || el.currentSrc || '').slice(0, 60))
+  } catch (err) {
+    ipcRenderer.send('log', '[capture] tap failed: ' + err.message)
+  }
+}
 
 function startCapture() {
   if (captureCtx) return
 
-  const video = document.querySelector('video')
-  if (!video) {
-    ipcRenderer.send('log', '[capture] No video element found, retrying in 1s')
-    setTimeout(startCapture, 1000)
-    return
-  }
-  ipcRenderer.send('log', '[capture] video found, readyState=' + video.readyState + ' paused=' + video.paused + ' src=' + video.src.slice(0, 60))
-
   captureCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
   captureCtx.resume().catch(() => {})
 
-  let source
-  try {
-    source = captureCtx.createMediaElementSource(video)
-  } catch (err) {
-    ipcRenderer.send('log', '[capture] createMediaElementSource failed: ' + err.message)
-    captureCtx = null
-    return
-  }
-
-  const workletCode = `
-    class PcmCapture extends AudioWorkletProcessor {
-      process(inputs) {
-        const inp = inputs[0]
-        if (!inp || !inp[0]) return true
-        const L = inp[0], R = inp[1] || inp[0]
-        const out = new Float32Array(L.length * ${CHANNELS})
-        for (let i = 0; i < L.length; i++) { out[i*2]=L[i]; out[i*2+1]=R[i] }
-        this.port.postMessage(out.buffer, [out.buffer])
-        return true
-      }
-    }
-    registerProcessor('pcm-capture', PcmCapture)
-  `
-  const blob = new Blob([workletCode], { type: 'application/javascript' })
+  const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' })
   const workletUrl = URL.createObjectURL(blob)
 
   captureCtx.audioWorklet.addModule(workletUrl).then(() => {
     URL.revokeObjectURL(workletUrl)
+
+    if (!captureCtx) return
+
     const worklet = new AudioWorkletNode(captureCtx, 'pcm-capture', {
       numberOfInputs: 1,
       numberOfOutputs: 1,
-      outputChannelCount: [2],
+      outputChannelCount: [CHANNELS],
     })
     worklet.port.onmessage = (e) => {
       ipcRenderer.send('audio-pcm', e.data)
     }
-    source.connect(worklet)
     worklet.connect(captureCtx.destination)
-    ipcRenderer.send('log', '[capture] AudioWorklet capture started, ctx state=' + captureCtx.state)
+
+    document.querySelectorAll('audio, video').forEach((el) => tapElement(el, worklet))
+
+    mutationObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType !== 1) continue
+          if (node.matches('audio, video')) tapElement(node, worklet)
+          node.querySelectorAll && node.querySelectorAll('audio, video').forEach((el) => tapElement(el, worklet))
+        }
+      }
+    })
+    mutationObserver.observe(document.documentElement, { childList: true, subtree: true })
+
+    ipcRenderer.send('log', '[capture] started, ctx=' + captureCtx.state + ' elements=' + document.querySelectorAll('audio,video').length)
   }).catch((err) => {
-    ipcRenderer.send('log', '[capture] AudioWorklet addModule failed: ' + err.message)
+    ipcRenderer.send('log', '[capture] addModule failed: ' + err.message)
+    captureCtx = null
   })
 }
