@@ -27,7 +27,7 @@ function _makeStream() {
   if (pcmInput) {
     try { pcmInput.destroy() } catch {}
   }
-  pcmInput = new PassThrough({ highWaterMark: 960 * 2 * 2 * 8 })
+  pcmInput = new PassThrough({ highWaterMark: 960 * 2 * 2 * 200 })
   const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 })
   pcmInput.pipe(encoder)
   const resource = createAudioResource(encoder, { inputType: StreamType.Opus })
@@ -50,6 +50,7 @@ function _playTestTone() {
 }
 
 function initVoicePlayer(connection) {
+  if (audioPlayer) { try { audioPlayer.stop() } catch {} }
   voiceConn = connection
   audioPlayer = createAudioPlayer()
 

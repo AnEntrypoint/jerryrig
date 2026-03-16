@@ -90,30 +90,6 @@ if (document.readyState === 'loading') {
   injectNavBar()
 }
 
-void (function patchAudioContext() {
-  if (window._gmAudioPatched) return
-  window._gmAudioPatched = true
-
-  const OrigAudioContext = window.AudioContext || window.webkitAudioContext
-  if (!OrigAudioContext) return
-
-  const dest = new OrigAudioContext({ sampleRate: 48000 }).createMediaStreamDestination()
-  const masterCtx = dest.context
-  masterCtx.resume().catch(() => {})
-  window._gmAudioStream = dest.stream
-
-  const _origConnect = AudioNode.prototype.connect
-  AudioNode.prototype.connect = function(target, outIdx, inIdx) {
-    if (target instanceof AudioDestinationNode) {
-      _origConnect.call(this, dest, outIdx)
-      return dest
-    }
-    return outIdx !== undefined
-      ? _origConnect.call(this, target, outIdx, inIdx)
-      : _origConnect.call(this, target)
-  }
-})()
-
 if (location.hostname.includes('youtube.com')) {
   const AD_SKIP_SELECTORS = [
     '.ytp-skip-ad-button',
