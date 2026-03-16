@@ -54,12 +54,6 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'electron', 'error.html')).catch(() => {})
   })
 
-  mainWindow.webContents.on('did-start-navigation', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('reset-capture')
-    }
-  })
-
   mainWindow.webContents.on('did-finish-load', async () => {
     console.log('[main] did-finish-load, injecting navbar + start-capture')
     if (!mainWindow || mainWindow.isDestroyed()) return
