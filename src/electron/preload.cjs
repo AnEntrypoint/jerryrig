@@ -119,19 +119,20 @@ function injectNavBar() {
   bar.appendChild(fwd)
   bar.appendChild(input)
   bar.appendChild(goBtn)
-  document.documentElement.insertBefore(bar, document.body)
+  document.documentElement.prepend(bar)
 
   const style = document.createElement('style')
   style.id = '_gm_navbar_style'
-  style.textContent = 'html { margin-top: 36px !important; } body { margin-top: 0 !important; }'
-  document.documentElement.insertBefore(style, document.body)
+  style.textContent = 'body { margin-top: 36px !important; padding-top: 0 !important; } ytd-app, #app, #root, [id="app"] { margin-top: 0 !important; }'
+  ;(document.head || document.documentElement).appendChild(style)
 
   const obs = new MutationObserver(() => {
+    if (!document.getElementById('_gm_navbar')) document.documentElement.prepend(bar)
     if (!document.getElementById('_gm_navbar_style')) {
-      document.documentElement.insertBefore(style, document.body)
+      ;(document.head || document.documentElement).appendChild(style)
     }
   })
-  obs.observe(document.documentElement, { childList: true })
+  obs.observe(document.documentElement, { childList: true, subtree: false })
 
   window.addEventListener('popstate', () => {
     const el = document.getElementById('_gm_navbar_url')
@@ -155,12 +156,19 @@ function injectYoutubeAdSkip() {
   trySkip()
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => { injectNavBar(); injectYoutubeAdSkip() })
-} else {
+function injectAll() {
   injectNavBar()
   injectYoutubeAdSkip()
 }
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', injectAll)
+} else {
+  injectAll()
+}
+
+// Re-inject after navigation (SPA pages replace body)
+window.addEventListener('load', injectAll)
 
 window.addEventListener('load', () => {
   const el = document.getElementById('_gm_navbar_url')
