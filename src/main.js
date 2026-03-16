@@ -1,6 +1,8 @@
-import 'dotenv/config'
-import { app, BrowserWindow, ipcMain, session } from 'electron'
+import dotenv from 'dotenv'
 import path from 'node:path'
+dotenv.config({ path: path.join(path.dirname(process.execPath), '.env') })
+dotenv.config()
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createClient, joinDiscordVoice, subscribeToSpeaker, leaveVoice } from './bot/client.js'

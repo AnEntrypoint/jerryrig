@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "electron .",
-    "start:debug": "electron . --enable-logging"
+    "start:debug": "electron . --enable-logging",
+    "build": "electron-builder --win"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.1",
@@ -19,6 +20,44 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.discord-screen-bridge.app",
+    "productName": "Discord Screen Bridge",
+    "forceCodeSigning": false,
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "!.env",
+      "!**/*.md",
+      "!cdp.mjs",
+      "!check_cdp.mjs",
+      "!clearvoice.js",
+      "!leavevoice.mjs",
+      "!setregion.js",
+      "!ecosystem.config.cjs",
+      "!agent-browser.json",
+      "!electron.log",
+      "!electron_start.log",
+      "!logs.txt"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }
