@@ -1,60 +1,75 @@
-# Discord Screen Bridge — Architecture
+# Discord Voice Bridge — Architecture
 
 ## System Overview
 
 Single Electron process that:
 1. Opens a BrowserWindow loading TARGET_URL
-2. Runs a discord.js-selfbot-v13 client in the main process
-3. Joins a Discord voice channel via the Streamer class (discord-video-stream)
-4. Captures the Electron window via desktopCapturer (in preload context)
-5. Pipes raw RGBA frames → ffmpeg → NUT stream → playStream (Go Live)
-6. Receives Discord voice audio → Opus decode → PCM Float32 → IPC → Web Audio API
+2. Runs a discord.js v14 bot client (official bot token) in the main process
+3. Joins a Discord voice channel via @discordjs/voice
+4. Captures the Electron window audio via desktopCapturer loopback (in preload context)
+5. Pipes raw PCM Float32 → interleaved s16le → prism-media Opus encoder → AudioResource → Discord voice
+6. Receives Discord voice audio → VoiceReceiver Opus stream → prism-media Opus decoder → PCM Float32 → IPC → Web Audio API playback
+
+## Audio Flow
+
+### Outbound (Electron → Discord)
+1. Electron window loads TARGET_URL
+2. On `did-finish-load`, main process calls `desktopCapturer.getSources` to find the window source ID
+3. Sends `start-capture` IPC to renderer with the source ID
+4. Preload uses `getUserMedia` with `chromeMediaSource: 'desktop'` + the source ID to get loopback audio stream
+5. ScriptProcessorNode taps audio at FRAME_SIZE=960 samples, interleaves stereo channels to Float32
+6. Sends `audio-pcm` IPC to main with the Float32Array buffer
+7. Main process `ipcMain.on('audio-pcm')` calls `pushAudioFrame(f32)`
+8. `pushAudioFrame` converts f32 to s16le, writes to PassThrough stream
+9. PassThrough → prism opus Encoder → createAudioResource(StreamType.Opus) → AudioPlayer.play()
+
+### Inbound (Discord → Electron)
+1. VoiceReceiver detects speaking via `speaking` event
+2. `subscribeToSpeaker` subscribes to user's Opus stream
+3. prism opus Decoder converts Opus → s16le PCM Buffer
+4. Decoded buffer converted to Float32Array (/ 32768)
+5. `sendAudioToRenderer` sends `audio-chunk` IPC to renderer
+6. Preload AudioContext schedules buffer playback with jitter buffer
 
 ## Key Architecture Decisions
 
 ### Bot runs in Electron main process
 No separate bot process. Eliminates socket/IPC complexity for audio. Bot and Electron share the same Node.js event loop.
 
-### Selfbot required for screen share
-Official Discord bot API does not support Go Live / screen share. Only selfbot (user token) + discord.js-selfbot-v13 + @dank074/discord-video-stream enables this.
+### Official bot token (discord.js v14)
+Uses `discord.js` v14 with `GatewayIntentBits.Guilds` and `GatewayIntentBits.GuildVoiceStates`. No selfbot. Bot must have CONNECT + SPEAK permissions in the target voice channel.
 
-### Audio routing: IPC → Web Audio API
-Discord voice receive → @discordjs/voice VoiceReceiver → prism-media OpusDecoder → PCM Int16 → converted Float32 → ipcMain → webContents.send → preload.cjs AudioContext → speakers. No virtual audio cable needed.
+### Audio capture via desktopCapturer loopback
+The preload script uses `getUserMedia` with `chromeMediaSource: 'desktop'` and the window's source ID. This captures both audio and a minimal video stream (1x1 px) to get the audio loopback. The video track is unused; only the audio track is processed.
 
-### Screen capture: desktopCapturer in preload
-The preload script (CJS, runs in renderer process) uses `navigator.mediaDevices.getUserMedia` with `chromeMediaSource: 'desktop'`. Raw RGBA frames extracted via OffscreenCanvas getImageData and sent to main via IPC.
-
-### Video encoding: standalone ffmpeg spawn
-@dank074/discord-video-stream v6 uses LibavDemuxer (WASM) which cannot handle raw RGBA input. We bypass `prepareStream` and spawn ffmpeg directly with `-f rawvideo -pix_fmt rgba` input piped from the frame stream, output NUT format piped to `playStream`.
+### PCM pipeline uses ScriptProcessorNode
+ScriptProcessorNode (deprecated but universally available in Electron/Chromium) is used in the preload to tap the audio at exactly 960 samples/frame (one Opus frame). This avoids AudioWorklet complexity and works reliably in the preload isolated world.
 
 ### preload.js must be .cjs
-With `"type": "module"` in package.json, Electron preload scripts must use `.cjs` extension or CommonJS format. The main process uses ESM.
+With `"type": "module"` in package.json, Electron preload scripts must use `.cjs` extension. The main process uses ESM.
+
+### Voice encryption: tweetnacl
+@discordjs/voice requires a sodium implementation. `tweetnacl` is used (pure JS, no native build required on Windows). `libsodium-wrappers` also present as fallback.
 
 ## Gotchas
 
-### OffscreenCanvas in preload
-`OffscreenCanvas` is available in Electron's preload context (Chromium renderer). If unavailable, fall back to regular Canvas in a hidden div.
+### Guild/channel cache on ready
+With discord.js v14, the guild and channel cache may not be populated immediately on `ready`. `joinDiscordVoice` explicitly calls `guilds.fetch()` and `guild.channels.fetch()` if the cache misses.
+
+### AudioPlayer idle after silence
+When no audio frames arrive, the AudioPlayer goes idle (resource stream ends or stalls). The `AudioPlayerStatus.Idle` handler calls `_startPlayback()` to reset the PassThrough + encoder pipeline and continue playing.
 
 ### AudioContext in preload isolated world
-With `contextIsolation: true`, the preload runs in a separate world but still has access to Web Audio API. Audio output goes to system speakers regardless of what page is loaded.
+With `contextIsolation: true`, the preload runs in a separate world but has access to Web Audio API. Inbound audio playback goes to system speakers regardless of what page is loaded.
 
-### voiceAdapterCreator on selfbot guild
-discord.js-selfbot-v13 Guild objects have `voiceAdapterCreator` compatible with @discordjs/voice. This is required for joinVoiceChannel.
-
-### discord-video-stream v6 API change
-v6 removed fluent-ffmpeg from prepareStream and switched to LibavDemuxer (node-av WASM). `prepareStream` still works for URL/file inputs but raw Readable streams must produce a recognizable container format (NUT, matroska). Our solution: spawn ffmpeg manually and pipe NUT output to playStream.
-
-### libsodium vs sodium-native
-@discordjs/voice prefers sodium-native (faster) but falls back to libsodium-wrappers. We install libsodium-wrappers to avoid Windows native build issues.
-
-### Electron window must stay visible
-desktopCapturer will return blank frames if the window is minimized. Keep the window visible during streaming.
+### desktopCapturer sourceId for loopback
+The source ID must match the exact window. `desktopCapturer` is called in main process (not renderer) and the ID is forwarded to the renderer via IPC. Electron requires `display-capture` permission to be granted (set in `setPermissionRequestHandler`).
 
 ## File Map
 
 - `src/main.js` — Electron main entry, wires all modules
-- `src/bot/client.js` — selfbot login, @discordjs/voice join, Opus decode, audio IPC send
-- `src/bot/voice.js` — Streamer, ffmpeg spawn, playStream
-- `src/electron/preload.cjs` — Audio playback (Web Audio) + screen capture (desktopCapturer)
+- `src/bot/client.js` — discord.js v14 login, @discordjs/voice join, Opus decode, audio IPC send
+- `src/bot/voice.js` — PCM PassThrough → Opus encoder → AudioResource → AudioPlayer
+- `src/electron/preload.cjs` — Audio playback (Web Audio) + loopback capture (desktopCapturer)
 - `src/electron/error.html` — Fallback page if TARGET_URL fails
 - `.env.example` — All configurable variables

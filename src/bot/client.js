@@ -1,4 +1,4 @@
-import { Client } from 'discord.js-selfbot-v13'
+import { Client, GatewayIntentBits } from 'discord.js'
 import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice'
 import prism from 'prism-media'
 
@@ -6,13 +6,21 @@ let voiceConnection = null
 let voiceReceiver = null
 
 function createClient() {
-  return new Client({ checkUpdate: false })
+  return new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+  })
 }
 
-function joinDiscordVoice(client, guildId, channelId) {
-  const guild = client.guilds.cache.get(guildId)
+async function joinDiscordVoice(client, guildId, channelId) {
+  let guild = client.guilds.cache.get(guildId)
+  if (!guild) guild = await client.guilds.fetch(guildId)
   if (!guild) throw new Error(`Guild ${guildId} not found`)
-  const channel = guild.channels.cache.get(channelId)
+
+  let channel = guild.channels.cache.get(channelId)
+  if (!channel) {
+    await guild.channels.fetch()
+    channel = guild.channels.cache.get(channelId)
+  }
   if (!channel) throw new Error(`Channel ${channelId} not found`)
 
   voiceConnection = joinVoiceChannel({

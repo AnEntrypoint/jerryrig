@@ -1,87 +1,62 @@
-import { Streamer, playStream } from '@dank074/discord-video-stream'
-import { spawn } from 'node:child_process'
+import { createAudioPlayer, createAudioResource, StreamType, AudioPlayerStatus, VoiceConnectionStatus } from '@discordjs/voice'
 import { PassThrough } from 'node:stream'
-import { createRequire } from 'node:module'
-import { execSync } from 'node:child_process'
+import prism from 'prism-media'
 
-const require = createRequire(import.meta.url)
+let audioPlayer = null
+let pcmInput = null
+let voiceConn = null
 
-function resolveFfmpeg() {
-  try {
-    execSync('ffmpeg -version', { stdio: 'ignore' })
-    return 'ffmpeg'
-  } catch {
-    return require('ffmpeg-static')
+function initVoicePlayer(connection) {
+  voiceConn = connection
+  audioPlayer = createAudioPlayer()
+  connection.subscribe(audioPlayer)
+
+  audioPlayer.on('error', (err) => console.error('[voice] AudioPlayer error:', err.message))
+  audioPlayer.on(AudioPlayerStatus.Idle, () => {
+    if (pcmInput && !pcmInput.destroyed) _startPlayback()
+  })
+
+  connection.on(VoiceConnectionStatus.Disconnected, () => {
+    try { connection.rejoin() } catch {}
+  })
+
+  _startPlayback()
+}
+
+function _startPlayback() {
+  if (pcmInput) {
+    try { pcmInput.destroy() } catch {}
   }
+  pcmInput = new PassThrough()
+
+  const encoder = new prism.opus.Encoder({ rate: 48000, channels: 2, frameSize: 960 })
+  pcmInput.pipe(encoder)
+
+  const resource = createAudioResource(encoder, { inputType: StreamType.Opus })
+  audioPlayer.play(resource)
 }
 
-const ffmpegPath = resolveFfmpeg()
-
-let streamer = null
-let ffmpegProc = null
-let frameInput = null
-
-function createStreamer(client) {
-  streamer = new Streamer(client)
-  return streamer
-}
-
-function startFfmpeg(width, height, fps, bitrate) {
-  frameInput = new PassThrough()
-
-  ffmpegProc = spawn(ffmpegPath, [
-    '-f', 'rawvideo',
-    '-pix_fmt', 'rgba',
-    '-s', `${width}x${height}`,
-    '-r', String(fps),
-    '-i', 'pipe:0',
-    '-c:v', 'libx264',
-    '-preset', 'ultrafast',
-    '-tune', 'zerolatency',
-    '-pix_fmt', 'yuv420p',
-    '-b:v', `${bitrate}k`,
-    '-maxrate', `${bitrate * 2}k`,
-    '-bufsize', `${bitrate / 2}k`,
-    '-bf', '0',
-    '-force_key_frames', 'expr:gte(t,n_forced*1)',
-    '-f', 'nut',
-    'pipe:1',
-  ])
-
-  frameInput.pipe(ffmpegProc.stdin)
-  ffmpegProc.stderr.on('data', () => {})
-  ffmpegProc.on('error', () => {})
-
-  return ffmpegProc.stdout
-}
-
-async function joinAndStream(guildId, channelId, width, height, fps, bitrate) {
-  if (!streamer) throw new Error('Streamer not initialized')
-
-  await streamer.joinVoice(guildId, channelId)
-  const videoOutput = startFfmpeg(width, height, fps, bitrate)
-
-  playStream(videoOutput, streamer, { type: 'go-live', format: 'nut' }).catch(() => {})
-}
-
-function pushFrame(rgbaBuffer) {
-  if (frameInput && !frameInput.destroyed) {
-    frameInput.write(Buffer.isBuffer(rgbaBuffer) ? rgbaBuffer : Buffer.from(rgbaBuffer))
+function pushAudioFrame(f32Buffer) {
+  if (!pcmInput || pcmInput.destroyed) return
+  const f32 = f32Buffer instanceof Float32Array ? f32Buffer : new Float32Array(f32Buffer)
+  const s16 = new Int16Array(f32.length)
+  for (let i = 0; i < f32.length; i++) {
+    const clamped = Math.max(-1, Math.min(1, f32[i]))
+    s16[i] = clamped < 0 ? clamped * 32768 : clamped * 32767
   }
+  pcmInput.write(Buffer.from(s16.buffer))
 }
 
-function stopLive() {
-  if (frameInput) {
-    frameInput.end()
-    frameInput = null
+function stopAudio() {
+  if (pcmInput) {
+    try { pcmInput.end() } catch {}
+    pcmInput = null
   }
-  if (ffmpegProc) {
-    ffmpegProc.kill('SIGTERM')
-    ffmpegProc = null
+  if (audioPlayer) {
+    audioPlayer.stop()
+    audioPlayer = null
   }
-  if (streamer) {
-    try { streamer.leaveVoice() } catch {}
-  }
+  voiceConn = null
 }
 
-export { createStreamer, joinAndStream, pushFrame, stopLive }
+export { initVoicePlayer, pushAudioFrame, stopAudio }
