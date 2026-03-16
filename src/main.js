@@ -78,6 +78,10 @@ function createWindow() {
     mainWindow.webContents.send('start-capture')
   })
 
+  mainWindow.webContents.on('console-message', (_, level, message) => {
+    if (level >= 2) console.error('[renderer-console]', message)
+  })
+
   mainWindow.on('closed', () => { mainWindow = null })
 }
 

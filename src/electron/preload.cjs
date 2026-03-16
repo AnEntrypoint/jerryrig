@@ -115,9 +115,12 @@ function injectNavBar() {
   bar.appendChild(goBtn)
   document.documentElement.insertBefore(bar, document.body)
 
-  const style = document.createElement('style')
-  style.textContent = 'html { padding-top: 36px !important; box-sizing: border-box !important; }'
-  document.head.appendChild(style)
+  document.documentElement.style.setProperty('padding-top', '36px', 'important')
+  document.documentElement.style.setProperty('box-sizing', 'border-box', 'important')
+  const obs = new MutationObserver(() => {
+    document.documentElement.style.setProperty('padding-top', '36px', 'important')
+  })
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
 
   window.addEventListener('popstate', () => {
     const el = document.getElementById('_gm_navbar_url')
@@ -160,8 +163,10 @@ ipcRenderer.on('reset-capture', () => {
   workletNode = null
 })
 
+let _ctxSeq = 0
 async function buildCaptureGraph() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE })
+  ctx.__id = ++_ctxSeq
   captureCtx = ctx
   ctx.resume().catch(() => {})
 
@@ -210,9 +215,9 @@ registerProcessor('capture-processor', CaptureProcessor)
 }
 
 function connectMediaEl(el) {
-  if (!captureCtx || captureCtx.state === 'closed') return
-  if (el._gmCaptured) return
-  el._gmCaptured = true
+  if (!captureCtx || captureCtx.state === 'closed' || !workletNode) return
+  if (el._gmCtxId === captureCtx.__id) return
+  el._gmCtxId = captureCtx.__id
   try {
     const src = captureCtx.createMediaElementSource(el)
     src.connect(workletNode)
@@ -260,6 +265,11 @@ async function startCapture() {
 
   await buildCaptureGraph()
   patchAudioNodeConnect()
+
+  const rescan = setInterval(() => {
+    if (captureGen !== gen) { clearInterval(rescan); return }
+    scanMediaElements()
+  }, 2000)
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
