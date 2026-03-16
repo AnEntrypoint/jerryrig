@@ -8,6 +8,7 @@ function normalizeUrl(raw) {
 
 function injectNavBar() {
   if (document.getElementById('_gm_navbar')) return
+  const _ipc = require('electron').ipcRenderer
 
   const bar = document.createElement('div')
   bar.id = '_gm_navbar'
@@ -29,13 +30,13 @@ function injectNavBar() {
   back.textContent = '\u2039'
   back.title = 'Back'
   back.style.cssText = btnStyle
-  back.onclick = () => window._gmNav.back()
+  back.onclick = () => _ipc.send('nav-back')
 
   const fwd = document.createElement('button')
   fwd.textContent = '\u203a'
   fwd.title = 'Forward'
   fwd.style.cssText = btnStyle
-  fwd.onclick = () => window._gmNav.forward()
+  fwd.onclick = () => _ipc.send('nav-forward')
 
   const input = document.createElement('input')
   input.id = '_gm_navbar_url'
@@ -61,7 +62,7 @@ function injectNavBar() {
 
   function go() {
     const url = normalizeUrl(input.value)
-    if (url) window._gmNav.go(url)
+    if (url) _ipc.send('nav-go', url)
   }
 
   bar.appendChild(back)
