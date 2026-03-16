@@ -6,7 +6,7 @@ Single Electron process that:
 1. Opens a BrowserWindow loading TARGET_URL
 2. Runs a discord.js v14 bot client (official bot token) in the main process
 3. Joins a Discord voice channel via @discordjs/voice
-4. Captures the Electron window audio via desktopCapturer loopback (in preload context)
+4. Captures the Electron window audio via MediaElementSource / MediaStreamDestination tap on all AudioContexts (in preload context)
 5. Pipes raw PCM Float32 → interleaved s16le → prism-media Opus encoder → AudioResource → Discord voice
 6. Receives Discord voice audio → VoiceReceiver Opus stream → prism-media Opus decoder → PCM Float32 → IPC → Web Audio API playback
 
@@ -14,14 +14,15 @@ Single Electron process that:
 
 ### Outbound (Electron → Discord)
 1. Electron window loads TARGET_URL
-2. On `did-finish-load`, main process calls `desktopCapturer.getSources` to find the window source ID
-3. Sends `start-capture` IPC to renderer with the source ID
-4. Preload uses `getUserMedia` with `chromeMediaSource: 'desktop'` + the source ID to get loopback audio stream
-5. ScriptProcessorNode taps audio at FRAME_SIZE=960 samples, interleaves stereo channels to Float32
-6. Sends `audio-pcm` IPC to main with the Float32Array buffer
-7. Main process `ipcMain.on('audio-pcm')` calls `pushAudioFrame(f32)`
-8. `pushAudioFrame` converts f32 to s16le, writes to PassThrough stream
-9. PassThrough → prism opus Encoder → createAudioResource(StreamType.Opus) → AudioPlayer.play()
+2. On `did-finish-load`, main sends `start-capture` IPC to renderer
+3. Preload patches `window.AudioContext` to intercept all new contexts via `tapPageCtx`
+4. `tapPageCtx` creates a MediaStreamDestination tap and patches `AudioNode.prototype.connect` to mirror all connections to `pageCtx.destination` into the tap
+5. All `<audio>`/`<video>` elements are tapped via `createMediaElementSource` (with `captureStream` fallback); a MutationObserver and periodic 2s scan catch dynamically added elements
+6. ScriptProcessorNode collects all tapped audio, interleaves stereo channels to Float32
+7. Sends `audio-pcm` IPC to main with the Float32Array buffer
+8. Main process `ipcMain.on('audio-pcm')` calls `pushAudioFrame(f32)`
+9. `pushAudioFrame` converts f32 to s16le, writes to PassThrough stream
+10. PassThrough → prism opus Encoder → createAudioResource(StreamType.Opus) → AudioPlayer.play()
 
 ### Inbound (Discord → Electron)
 1. VoiceReceiver detects speaking via `speaking` event
@@ -62,23 +63,25 @@ When no audio frames arrive, the AudioPlayer goes idle (resource stream ends or 
 ### AudioContext in preload isolated world
 With `contextIsolation: true`, the preload runs in a separate world but has access to Web Audio API. Inbound audio playback goes to system speakers regardless of what page is loaded.
 
-### desktopCapturer sourceId for loopback
-The source ID must match the exact window. `desktopCapturer` is called in main process (not renderer) and the ID is forwarded to the renderer via IPC. Electron requires `display-capture` permission to be granted (set in `setPermissionRequestHandler`).
+### Audio capture via Web Audio tap (not desktopCapturer)
+The preload patches `window.AudioContext` to intercept all page-created contexts. Each context gets a `MediaStreamDestination` tap; `AudioNode.prototype.connect` is patched to mirror connections to destination into the tap. `<audio>`/`<video>` elements are captured via `createMediaElementSource`. A periodic scan every 2s catches elements added after the MutationObserver fires. `display-capture` permission is granted in `setPermissionRequestHandler` but is no longer required for this approach.
 
 ## agent-browser (CDP)
 
-The Electron window exposes Chrome DevTools Protocol on `127.0.0.1:CDP_PORT` (default 9222).
+The Electron window exposes Chrome DevTools Protocol on `127.0.0.1:CDP_PORT`. The `.env` sets `CDP_PORT=9229` (port 9222 is blocked by Windows firewall/access-control on this machine).
 
 Connect with [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser):
 
 ```
-agent-browser connect 9222
+agent-browser connect 9229
 agent-browser snapshot
 agent-browser screenshot
-agent-browser --cdp 9222 open https://example.com
+agent-browser --cdp 9229 open https://example.com
 ```
 
-The port is set via `app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)` before `app ready`. Change it with `CDP_PORT=9223` in `.env`.
+`/json/version` returns `webSocketDebuggerUrl` with `127.0.0.1` (not `localhost`). This is required on Windows where `localhost` can resolve to `::1` (IPv6) and break CDP WebSocket connections. The `--remote-debugging-address=127.0.0.1` switch in main.js enforces this.
+
+The port is set via `app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)` before `app ready`. Change it with `CDP_PORT=<port>` in `.env`.
 
 No custom HTTP server is needed — Electron's built-in CDP server is the interface agent-browser uses.
 

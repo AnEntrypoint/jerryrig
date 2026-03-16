@@ -38,12 +38,10 @@ function resetCapture() {
 
 const tappedElements = new WeakSet()
 const tappedPageCtxs = new WeakSet()
+let tappedCtxCount = 0
 
 function tapElement(el) {
-  if (tappedElements.has(el) || !captureCtx || !captureWorklet) {
-    ipcRenderer.send('log', '[capture] tapElement skip: tapped=' + tappedElements.has(el) + ' ctx=' + !!captureCtx + ' worklet=' + !!captureWorklet)
-    return
-  }
+  if (tappedElements.has(el) || !captureCtx || !captureWorklet) return
   tappedElements.add(el)
   try {
     captureCtx.createMediaElementSource(el).connect(captureWorklet)
@@ -63,12 +61,13 @@ function tapElement(el) {
 function tapPageCtx(pageCtx) {
   if (!pageCtx || tappedPageCtxs.has(pageCtx) || pageCtx === captureCtx || pageCtx === playCtx || !captureCtx || !captureWorklet) return
   tappedPageCtxs.add(pageCtx)
+  tappedCtxCount++
   try {
     const dest = pageCtx.createMediaStreamDestination()
     const tap = pageCtx.createGain()
     tap.connect(dest)
     captureCtx.createMediaStreamSource(dest.stream).connect(captureWorklet)
-    ipcRenderer.send('log', '[capture] tapped page AudioContext via MediaStreamDestination')
+    ipcRenderer.send('log', '[capture] tapped AudioContext #' + tappedCtxCount + ' via MediaStreamDestination')
 
     const _origConnect = AudioNode.prototype.connect
     AudioNode.prototype.connect = function (target, ...args) {
@@ -145,4 +144,9 @@ async function startCapture() {
   }).observe(document.documentElement, { childList: true, subtree: true })
 
   ipcRenderer.send('log', '[capture] active, elements=' + document.querySelectorAll('audio,video').length)
+
+  const scanInterval = setInterval(() => {
+    if (captureGen !== gen) { clearInterval(scanInterval); return }
+    document.querySelectorAll('audio,video').forEach(tapElement)
+  }, 2000)
 }
