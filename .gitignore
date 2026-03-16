@@ -1,3 +1,4 @@
 .gm-stop-verified
 node_modules/
 package-lock.json
+.env  
