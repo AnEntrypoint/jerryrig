@@ -108,32 +108,23 @@ async function joinDiscordVoice(client, guildId, channelId) {
     client.on('voiceStateUpdate', onVoiceState)
   })
 
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= 8; attempt++) {
     try {
       voiceConnection = await _tryJoin(channel, guild, attempt)
       voiceReceiver = voiceConnection.receiver
 
-      voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
-        console.log('[client] disconnected, attempting rejoin')
-        try {
-          await Promise.race([
-            entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
-            entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
-          ])
-        } catch {
-          voiceConnection.destroy()
-        }
+      voiceConnection.on(VoiceConnectionStatus.Disconnected, () => {
+        console.log('[client] voice disconnected')
+        try { voiceConnection.destroy() } catch {}
       })
 
       return { voiceConnection, voiceReceiver }
     } catch (err) {
       console.log(`[client] attempt ${attempt} failed: ${err.message}, closeCode=${err.closeCode}`)
-      if (attempt < 3) {
-        const delay = err.closeCode === 4017 ? 8000 : 2000
-        console.log(`[client] waiting ${delay}ms before retry...`)
-        await new Promise(r => setTimeout(r, delay))
-        _destroyExisting(guildId)
-      }
+      const delay = err.closeCode === 4017 ? 10000 : err.closeCode === 4006 ? 8000 : 4000
+      console.log(`[client] waiting ${delay}ms before retry...`)
+      await new Promise(r => setTimeout(r, delay))
+      _destroyExisting(guildId)
     }
   }
 

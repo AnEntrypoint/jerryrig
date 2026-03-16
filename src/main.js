@@ -64,6 +64,8 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'electron', 'error.html')).catch(() => {})
   })
 
+  mainWindow.webContents.setAudioMuted(true)
+
   mainWindow.webContents.on('did-finish-load', async () => {
     console.log('[main] did-finish-load, injecting navbar + start-capture')
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -121,7 +123,10 @@ async function startBot() {
 
   botClient = createClient()
 
+  let _connecting = false
   const connectVoice = async () => {
+    if (_connecting) return
+    _connecting = true
     try {
       const { voiceConnection } = await joinDiscordVoice(botClient, GUILD_ID, CHANNEL_ID)
       console.log('[bot] Joined voice channel')
@@ -130,11 +135,13 @@ async function startBot() {
       voiceConnection.once('stateChange', (o, n) => {
         if (n.status === 'destroyed') {
           console.log('[bot] Voice connection destroyed, reconnecting in 15s')
+          _connecting = false
           setTimeout(connectVoice, 15000)
         }
       })
     } catch (err) {
       console.error('[bot] Join error:', err.message, '— retrying in 15s')
+      _connecting = false
       setTimeout(connectVoice, 15000)
     }
   }

@@ -33,26 +33,27 @@ async function startCapture() {
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null }
   captureWorklet = null
 
-  // Get system audio loopback via desktopCapturer
+  // Prefer main-world AudioContext intercept stream, fall back to desktop loopback
   let stream = null
-  try {
-    const sourceId = await ipcRenderer.invoke('get-desktop-source-id')
-    if (sourceId) {
-      const gumPromise = navigator.mediaDevices.getUserMedia({
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: sourceId,
-          }
-        },
-        video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, minWidth: 1, maxWidth: 1, minHeight: 1, maxHeight: 1, maxFrameRate: 1 } },
-      }).then(s => { s.getVideoTracks().forEach(t => t.stop()); return s })
-      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('getUserMedia timeout after 8s')), 8000))
-      stream = await Promise.race([gumPromise, timeout])
-      ipcRenderer.send('log', '[capture] loopback stream acquired, tracks=' + stream.getAudioTracks().length)
+  const injectedStream = window._gmAudioStream
+  if (injectedStream && injectedStream.getAudioTracks().length) {
+    stream = injectedStream
+    ipcRenderer.send('log', '[capture] using injected AudioContext stream, tracks=' + stream.getAudioTracks().length)
+  } else {
+    try {
+      const sourceId = await ipcRenderer.invoke('get-desktop-source-id')
+      if (sourceId) {
+        const gumPromise = navigator.mediaDevices.getUserMedia({
+          audio: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId } },
+          video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, minWidth: 1, maxWidth: 1, minHeight: 1, maxHeight: 1, maxFrameRate: 1 } },
+        }).then(s => { s.getVideoTracks().forEach(t => t.stop()); return s })
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('getUserMedia timeout after 8s')), 8000))
+        stream = await Promise.race([gumPromise, timeout])
+        ipcRenderer.send('log', '[capture] loopback stream acquired, tracks=' + stream.getAudioTracks().length)
+      }
+    } catch (e) {
+      ipcRenderer.send('log', '[capture] loopback failed: ' + e.message + ', falling back to element tap')
     }
-  } catch (e) {
-    ipcRenderer.send('log', '[capture] loopback failed: ' + e.message + ', falling back to element tap')
   }
 
   if (captureGen !== gen) { if (stream) stream.getTracks().forEach(t => t.stop()); return }
