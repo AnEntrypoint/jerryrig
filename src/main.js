@@ -16,6 +16,7 @@ app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)
 app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1')
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled')
 app.commandLine.appendSwitch('disable-features', 'MediaRouter')
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const GUILD_ID = process.env.GUILD_ID
 const CHANNEL_ID = process.env.CHANNEL_ID

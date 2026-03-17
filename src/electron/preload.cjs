@@ -311,6 +311,18 @@ window.addEventListener('load', () => {
   if (el) el.value = location.href
 })
 
+const _OrigAudioContext = window.AudioContext || window.webkitAudioContext
+const _pageContexts = new Set()
+const _AudioContextProxy = function AudioContext(opts) {
+  const ctx = new _OrigAudioContext(opts)
+  _pageContexts.add(ctx)
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+  return ctx
+}
+_AudioContextProxy.prototype = _OrigAudioContext.prototype
+window.AudioContext = _AudioContextProxy
+if (window.webkitAudioContext) window.webkitAudioContext = _AudioContextProxy
+
 ipcRenderer.on('start-capture', () => startCapture())
 ipcRenderer.on('reset-capture', () => {
   captureGen++
@@ -324,10 +336,10 @@ if (!location.href.startsWith('chrome-error://') && !location.href.startsWith('d
 
 let _ctxSeq = 0
 async function buildCaptureGraph() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE })
+  const ctx = new _OrigAudioContext({ sampleRate: SAMPLE_RATE })
   ctx.__id = ++_ctxSeq
   captureCtx = ctx
-  ctx.resume().catch(() => {})
+  await ctx.resume().catch(() => {})
 
   const preloadDir = (process.argv.find(a => a.startsWith('--preload-dir=')) || '').slice('--preload-dir='.length)
   const workletUrl = 'file:///' + preloadDir.replace(/\\/g, '/') + '/capture-worklet.js'
@@ -402,8 +414,6 @@ async function startCapture() {
   captureGen++
   const gen = captureGen
 
-  await new Promise(r => setTimeout(r, 500))
-  if (captureGen !== gen) return
   if (captureCtx) { captureCtx.close().catch(() => {}); captureCtx = null; workletNode = null }
 
   try {
@@ -412,7 +422,11 @@ async function startCapture() {
     ipcRenderer.send('log', '[capture] buildCaptureGraph failed: ' + e.message)
     return
   }
+  if (captureGen !== gen) return
   patchAudioNodeConnect()
+  for (const ctx of _pageContexts) {
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+  }
 
   const rescan = setInterval(() => {
     if (captureGen !== gen) { clearInterval(rescan); return }
