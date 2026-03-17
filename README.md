@@ -1,12 +1,12 @@
 # Screens
 
-A general-purpose Electron browser with audio routing capabilities. It loads any web page in a full Chromium window (spoofed as Chrome 134) and can stream that window's audio out to a Discord voice channel.
+A general-purpose Electron browser with audio routing capabilities. It loads any web page in a full Chromium window and can stream that window's audio out to a Discord voice channel.
 
 ## What it is
 
 At its core this is a controllable browser window:
 - Loads any URL (YouTube, SoundCloud, voice calls, anything)
-- Appears as a real Chrome 134 browser to external servers (full fingerprint spoof)
+- Runs on Chromium, compatible with sites that expect a modern Chrome browser
 - Controllable via Chrome DevTools Protocol (CDP) on port 9229 — use `agent-browser` to automate it
 - Navigation bar lets you change URLs on the fly
 
