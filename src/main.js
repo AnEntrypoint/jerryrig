@@ -4,6 +4,7 @@ dotenv.config({ path: path.join(path.dirname(process.execPath), '.env') })
 dotenv.config()
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { fileURLToPath } from 'node:url'
+import { WebSocketServer } from 'ws'
 import { createClient, joinDiscordVoice, leaveVoice } from './bot/client.js'
 import { initVoicePlayer, pushAudioFrame, stopAudio } from './bot/voice.js'
 
@@ -13,6 +14,7 @@ const CDP_PORT = process.env.CDP_PORT || '9229'
 const SWARM_TOPIC = process.env.SWARM_TOPIC || ''
 const SWARM_ROLE = process.env.SWARM_ROLE || 'host'
 const CDP_PROXY_PORT = parseInt(process.env.CDP_PROXY_PORT || '9230', 10)
+const WS_AUDIO_PORT = parseInt(process.env.WS_AUDIO_PORT || '9888', 10)
 const WINDOW_TITLE = 'Discord Voice Bridge'
 
 app.commandLine.appendSwitch('remote-debugging-port', CDP_PORT)
@@ -135,6 +137,21 @@ async function startP2P() {
   console.log(`[p2p] started as ${SWARM_ROLE}`)
 }
 
+function startWsServer() {
+  const wss = new WebSocketServer({ port: WS_AUDIO_PORT, host: '127.0.0.1' })
+  wss.on('connection', (ws) => {
+    ws.on('message', (data, isBinary) => {
+      if (!isBinary) return
+      const buf = Buffer.isBuffer(data) ? data : Buffer.from(data)
+      const f32 = new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4)
+      pushAudioFrame(f32)
+    })
+    ws.on('error', () => {})
+  })
+  wss.on('error', (err) => console.error('[ws-audio] error:', err.message))
+  console.log(`[ws-audio] listening on ws://127.0.0.1:${WS_AUDIO_PORT}`)
+}
+
 async function startBot() {
   if (!process.env.DISCORD_BOT_TOKEN || !process.env.GUILD_ID || !process.env.CHANNEL_ID) {
     console.warn('[bot] BOT_TOKEN, GUILD_ID, or CHANNEL_ID not set — bot disabled'); return
@@ -164,6 +181,7 @@ async function startBot() {
 app.on('ready', async () => {
   session.defaultSession.setPermissionRequestHandler((_, p, cb) => cb(['media', 'display-capture'].includes(p)))
   createWindow()
+  startWsServer()
   await startP2P()
   await startBot()
 })
