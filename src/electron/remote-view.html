@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+#frame { width: 100%; height: 100%; object-fit: contain; display: block; }
+#status { position: fixed; top: 8px; left: 8px; color: #666; font: 12px monospace; pointer-events: none; }
+</style>
+</head>
+<body>
+<img id="frame" src="" alt="">
+<div id="status">Waiting for host...</div>
+<script>
+const img = document.getElementById('frame')
+const status = document.getElementById('status')
+let frameCount = 0
+
+if (typeof require !== 'undefined') {
+  const { ipcRenderer } = require('electron')
+  ipcRenderer.on('screen-frame', (_, jpegBase64) => {
+    img.src = 'data:image/jpeg;base64,' + jpegBase64
+    frameCount++
+    if (frameCount % 30 === 0) status.textContent = 'frames: ' + frameCount
+  })
+}
+</script>
+</body>
+</html>
