@@ -1,7 +1,7 @@
 {
-  "name": "discord-screen-bridge",
+  "name": "jerryrig",
   "version": "1.0.0",
-  "description": "Discord bot that screen shares an Electron window and routes voice audio back",
+  "description": "General-purpose Electron browser with audio routing to Discord",
   "main": "src/main.js",
   "type": "module",
   "scripts": {
@@ -23,8 +23,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.discord-screen-bridge.app",
-    "productName": "Discord Screen Bridge",
+    "appId": "com.jerryrig.app",
+    "productName": "Jerryrig",
     "forceCodeSigning": false,
     "asar": true,
     "extraResources": [
