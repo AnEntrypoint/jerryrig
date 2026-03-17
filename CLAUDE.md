@@ -101,6 +101,38 @@ The port is set via `app.commandLine.appendSwitch('remote-debugging-port', CDP_P
 
 No custom HTTP server is needed — Electron's built-in CDP server is the interface agent-browser uses.
 
+## Browser Extension Host Mode
+
+The `extension/` directory contains a Chrome extension that can replace the Electron window entirely. It provides the same capabilities (audio relay, screen relay, CDP passthrough, input forwarding) using only a Chrome browser and the extension.
+
+### Framing Protocol
+
+All binary WebSocket messages use the same 4+4+N framing as `src/p2p/swarm.js`:
+
+- Bytes 0–3: message type as LE uint32 (AUDIO=1, FRAME=2, INPUT=5)
+- Bytes 4–7: payload length as LE uint32
+- Bytes 8+: payload
+
+Audio payload: interleaved stereo Float32Array (48 kHz, 4096-sample frames).
+Frame payload: JPEG bytes captured from the tab video track at ~10fps.
+Input payload: JSON string of a CDP Input event (`{ type, ...fields }`).
+
+### Extension Files
+
+- `extension/offscreen.js` — Runs in the offscreen document. Captures tab audio and video via `getUserMedia` with `chromeMediaSource: tab`. Sends AUDIO frames and FRAME (JPEG) messages to `ws://127.0.0.1:9888` with framing headers. Video uses `ImageCapture.grabFrame()` + `OffscreenCanvas.convertToBlob()` at 10fps.
+- `extension/background.js` — Service worker. Gets `tabCapture` stream ID, attaches `chrome.debugger` to the tab, opens a second WebSocket to `ws://127.0.0.1:9231` for CDP bidirectional bridging, and dispatches INPUT (type=5) messages from the main WS as `chrome.debugger` Input events.
+- `extension/popup.js` / `extension/popup.html` — UI with two URL inputs (audio/video WS and CDP WS) and status indicators for both connections.
+- `extension/manifest.json` — MV3, requires `tabCapture`, `offscreen`, `storage`, `activeTab`, `debugger` permissions.
+
+### Ports
+
+- `ws://127.0.0.1:9888` — audio PCM + JPEG frames + INPUT dispatch (main data channel)
+- `ws://127.0.0.1:9231` — CDP command/event bridge (extension tab debugger ↔ jerryrig)
+
+### Difference from Electron host
+
+The Electron host captures audio via Web Audio API tap in the preload. The extension uses `chrome.tabCapture` + `getUserMedia` in an offscreen document. CDP in Electron is the built-in `--remote-debugging-port` server. CDP in the extension is `chrome.debugger` attached to the active tab and bridged over WebSocket.
+
 ## File Map
 
 - `src/main.js` — Electron main entry, wires all modules

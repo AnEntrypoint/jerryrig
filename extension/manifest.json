@@ -2,12 +2,13 @@
   "manifest_version": 3,
   "name": "Jerryrig Audio Bridge",
   "version": "1.0.0",
-  "description": "Captures tab audio and sends PCM frames to Jerryrig via WebSocket",
+  "description": "Full host mode: tab audio/video relay, CDP passthrough, and input forwarding to Jerryrig via WebSocket",
   "permissions": [
     "tabCapture",
     "offscreen",
     "storage",
-    "activeTab"
+    "activeTab",
+    "debugger"
   ],
   "background": {
     "service_worker": "background.js"
