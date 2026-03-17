@@ -1,0 +1,69 @@
+{
+  "name": "discord-screen-bridge",
+  "version": "1.0.0",
+  "description": "Discord bot that screen shares an Electron window and routes voice audio back",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "start:debug": "electron . --enable-logging",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "@discordjs/voice": "^0.19.1",
+    "discord.js": "^14.25.1",
+    "dotenv": "^16.4.5",
+    "libsodium-wrappers": "^0.7.15",
+    "opusscript": "^0.0.8",
+    "prism-media": "^1.3.4",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.discord-screen-bridge.app",
+    "productName": "Discord Screen Bridge",
+    "forceCodeSigning": false,
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "src/electron/capture-worklet.js",
+        "to": "capture-worklet.js"
+      }
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "AnEntrypoint",
+      "repo": "jerryrig"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "!.env",
+      "!**/*.md",
+      "!ecosystem.config.cjs",
+      "!agent-browser.json",
+      "!electron.log",
+      "!electron_start.log",
+      "!logs.txt"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}
