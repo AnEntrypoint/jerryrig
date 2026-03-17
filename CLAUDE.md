@@ -1,4 +1,4 @@
-# Discord Voice Bridge — Architecture
+# Jerryrig — Architecture
 
 ## System Overview
 
